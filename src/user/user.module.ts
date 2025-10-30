@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './schema/user.schema';
 import { Tutor, TutorSchema } from './schema/tutor.schema';
 import { Student, StudentSchema } from './schema/student.schema';
+import { Admin, AdminSchema } from './schema/admin.schema';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { Student, StudentSchema } from './schema/student.schema';
           const schema = UserSchema;
           schema.discriminator(Tutor.name, TutorSchema);
           schema.discriminator(Student.name, StudentSchema);
+          schema.discriminator(Admin.name, AdminSchema);
           return schema;
         },
       },
@@ -22,5 +24,6 @@ import { Student, StudentSchema } from './schema/student.schema';
   ],
   controllers: [UserController],
   providers: [UserService],
+  exports: [UserService],
 })
 export class UserModule {}
