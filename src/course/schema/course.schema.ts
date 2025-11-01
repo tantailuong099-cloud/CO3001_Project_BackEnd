@@ -9,10 +9,19 @@ export class Course {
   courseName: string;
 
   @Prop()
+  subject: string;
+
+  @Prop()
   duration: string;
+
+  @Prop({type: [String], default: []})
+  schedule: string[];
 
   @Prop()
   description: string;
+
+  @Prop({required: true, default: 60})
+  capacity: number;
   
   @Prop({ type: [{type: mongoose.Schema.Types.ObjectId, ref: 'User'}] })
   tutors: User[];
