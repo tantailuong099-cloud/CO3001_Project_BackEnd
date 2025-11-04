@@ -21,9 +21,6 @@ export class MatchingService {
 
     @InjectModel(Course.name)
     private readonly courseModel: Model<CourseDocument>,
-
-    @InjectModel(Tutor.name) // Inject the Tutor model
-    private readonly tutorModel: Model<TutorDocument>,
   ) {}
 
   /**
@@ -202,8 +199,7 @@ export class MatchingService {
     preferredTimeSlots?: string[],
   ) {
     // 1. Find all tutors
-    const allTutors = await this.tutorModel.find().exec();
-    // Cast to TutorDocument
+    const allTutors = await this.userModel.find({ role: UserRole.TUTOR }).exec();
 
     if (!allTutors || allTutors.length === 0) {
       return {
