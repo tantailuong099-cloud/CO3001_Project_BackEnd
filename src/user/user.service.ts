@@ -8,13 +8,13 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserDocument } from './schema/user.schema';
-import { Model } from 'mongoose';
+import { Model, UpdateQuery } from 'mongoose';
 import { CreateUserDto } from './dto/create-user.dto';
 import { Tutor, TutorDocument } from './schema/tutor.schema';
 import { Student, StudentDocument } from './schema/student.schema';
 import { Admin, AdminDocument } from './schema/admin.schema';
 
-export type UpdateUserType = Partial<User | Tutor | Student | Admin>;
+export type UpdateUserType = UpdateQuery<Partial<User | Tutor | Student | Admin>>;
 
 @Injectable()
 export class UserService {
