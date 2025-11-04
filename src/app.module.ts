@@ -11,7 +11,16 @@ import { FeedbackModule } from './feedback/feedback.module';
 import { ReportModule } from './report/report.module';
 
 @Module({
-  imports: [DatabaseModule, AuthModule, UserModule, CourseModule, MaterialsModule, MatchingModule, FeedbackModule, ReportModule],
+  imports: [
+    DatabaseModule,
+    AuthModule,
+    UserModule,
+    CourseModule,
+    MaterialsModule,
+    MatchingModule,
+    FeedbackModule,
+    ReportModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
