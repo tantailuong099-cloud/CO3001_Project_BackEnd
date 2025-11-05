@@ -77,7 +77,7 @@ export class CourseController {
     if (req.user.role !== 'Admin') {
       throw new ForbiddenException('Only Admins can assign tutors');
     }
-    return this.courseService.assignTutorToCourse(id, assignTutorDto.tutorId);
+    return this.courseService.assignTutorToCourse(id, assignTutorDto.courseId);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -92,7 +92,7 @@ export class CourseController {
     }
     return this.courseService.unassignTutorFromCourse(
       id,
-      assignTutorDto.tutorId,
+      assignTutorDto.courseId,
     );
   }
 

@@ -6,6 +6,10 @@ export class CreateCourseDto {
   courseName: string;
 
   @IsString()
+  @IsNotEmpty()
+  subject: string;
+
+  @IsString()
   @IsOptional()
   description: string;
 
@@ -13,15 +17,27 @@ export class CreateCourseDto {
   @IsOptional()
   duration: string;
 
+  @IsNumber()
+  @IsNotEmpty()
+  capacity: number;
+
   @IsString()
   @IsNotEmpty()
-  courseId: string;
-
-  @IsNumber()
-  @IsOptional()
-  numberOfStudents: number;
+  registrationStart: string;
 
   @IsString()
-  @IsOptional()
+  @IsNotEmpty()
+  registrationEnd: string;
+
+  @IsString()
+  @IsNotEmpty()
+  courseStart: string;
+
+  @IsString()
+  @IsNotEmpty()
+  courseEnd: string;
+
+  @IsString()
+  @IsNotEmpty()
   tutor: string;
 }
