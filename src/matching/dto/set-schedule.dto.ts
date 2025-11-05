@@ -1,0 +1,41 @@
+// src\matching\dto\set-constraints.dto.ts
+
+import { IsMongoId, IsArray, IsString, ValidateNested, IsNotEmpty } from 'class-validator';
+import { Type } from 'class-transformer';
+
+/**
+ * This is the DTO for a single session's schedule.
+ */
+class SessionDto {
+  @IsString()
+  @IsNotEmpty()
+  day: string;
+
+  @IsString()
+  @IsNotEmpty()
+  startTime: string; // e.g., "09:00"
+
+  @IsString()
+  @IsNotEmpty()
+  endTime: string; // e.g., "11:00"
+}
+
+/**
+ * This is the main DTO a tutor submits to set the final schedule for a specific course.
+ */
+export class SetScheduleDto {
+  /**
+   * The ID of the course to which this schedule applies.
+   */
+  @IsMongoId()
+  @IsNotEmpty()
+  courseId: string;
+
+  /**
+   * The array of session times for this course.
+   */
+  @IsArray()
+  @ValidateNested({ each: true }) // Validates each object in the array
+  @Type(() => SessionDto) // Tells class-validator to use SessionDto
+  sessions: SessionDto[];
+}

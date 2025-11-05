@@ -1,3 +1,5 @@
+// src\course\course.service.ts
+
 import {
   Injectable,
   InternalServerErrorException,
@@ -77,7 +79,7 @@ export class CourseService {
       throw new InternalServerErrorException('User is not a tutor');
     }
 
-    course.tutors.push(tutor);
+    course.tutors.push(tutor._id.toString());
     return await course.save();
   }
 
@@ -92,7 +94,7 @@ export class CourseService {
       throw new InternalServerErrorException('User is not a student');
     }
 
-    course.students.push(student);
+    course.students.push(student._id.toString());
     return await course.save();
   }
 }
