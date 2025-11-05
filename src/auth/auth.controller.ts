@@ -1,17 +1,31 @@
-import { Body, Controller, Post, Res, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Res,
+  Req,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt/jwt-auth.guard';
 import { Response, Request } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+  @UseInterceptors(FileInterceptor('avatar'))
+  async register(
+    @Body() registerDto: RegisterDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.authService.register(registerDto, file);
   }
 
   @Post('login')
@@ -24,7 +38,7 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    return this.logout(res);
+    return this.authService.logout(res);
   }
 
   @UseGuards(JwtAuthGuard)

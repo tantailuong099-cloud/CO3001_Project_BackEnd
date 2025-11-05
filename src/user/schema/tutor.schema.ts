@@ -1,7 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { User } from './user.schema';
 import { HydratedDocument } from 'mongoose';
-import * as mongoose from 'mongoose';
 
 // Subdocument schema for constraints
 @Schema({ _id: false })

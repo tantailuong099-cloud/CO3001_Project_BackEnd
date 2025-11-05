@@ -1,12 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Registration, RegistrationDocument, RegistrationStatus } from './schema/registration.schema';
+import {
+  Registration,
+  RegistrationDocument,
+  RegistrationStatus,
+} from './schema/registration.schema';
 import { RegisterProgramDto } from './dto/register-program.dto';
 import { SetConstraintsDto } from './dto/set-constraints.dto';
 import { User, UserRole, UserDocument } from '@/user/schema/user.schema';
 import { Course, CourseDocument } from '@/course/schema/course.schema';
-import { Tutor, TutorDocument } from '@/user/schema/tutor.schema'; 
+import { Tutor, TutorDocument } from '@/user/schema/tutor.schema';
 
 type TimeSlot = { day: string; start: number; end: number }; // start, end as minutes from 00:00
 
@@ -49,9 +57,13 @@ export class MatchingService {
     }
 
     // If student already registered for same course, we can decide what to do.
-    const existing = await this.registrationModel.findOne({ course: courseId, student: studentId }).exec();
+    const existing = await this.registrationModel
+      .findOne({ course: courseId, student: studentId })
+      .exec();
     if (existing) {
-      throw new BadRequestException('Student already registered for this course');
+      throw new BadRequestException(
+        'Student already registered for this course',
+      );
     }
 
     // If tutor explicitly chosen, validate tutor
@@ -103,7 +115,7 @@ export class MatchingService {
       message: assigned.message,
     };
   }
-  
+
   /**
    * Tutor updates constraints
    */
@@ -115,21 +127,27 @@ export class MatchingService {
     const updateData: any = {};
     if (preferredSubjects) updateData.preferredSubjects = preferredSubjects;
     if (constraints) updateData.constraints = constraints;
-    if (preferredStudentLevel) updateData.preferredStudentLevel = preferredStudentLevel;
+    if (preferredStudentLevel)
+      updateData.preferredStudentLevel = preferredStudentLevel;
 
-    const updatedTutor = await this.userModel.findOneAndUpdate(
-      { _id: tutorId, role: UserRole.TUTOR }, // Ensure we only update tutors
-      { $set: updateData },
-      { new: true, runValidators: true },
-    ).exec();
+    const updatedTutor = await this.userModel
+      .findOneAndUpdate(
+        { _id: tutorId, role: UserRole.TUTOR }, // Ensure we only update tutors
+        { $set: updateData },
+        { new: true, runValidators: true },
+      )
+      .exec();
 
     if (!updatedTutor) {
       throw new NotFoundException('Tutor not found');
     }
 
-    return { success: true, message: 'Constraints updated successfully', tutor: updatedTutor };
+    return {
+      success: true,
+      message: 'Constraints updated successfully',
+      tutor: updatedTutor,
+    };
   }
-
 
   /* ----------------------
    Helper types & methods
@@ -155,40 +173,41 @@ export class MatchingService {
     return { day, start, end };
   }
 
-
-/**
- * parseHHMM: "09:30" -> 570 (minutes since midnight). returns number or null.
- * Keep it simple and timezone-agnostic since we store local times as strings.
- */
+  /**
+   * parseHHMM: "09:30" -> 570 (minutes since midnight). returns number or null.
+   * Keep it simple and timezone-agnostic since we store local times as strings.
+   */
   private parseHHMM(hhmm: string): number | null {
     const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
     if (!m) return null;
     const h = Number(m[1]);
     const mm = Number(m[2]);
-    if (isNaN(h) || isNaN(mm) || h < 0 || h > 23 || mm < 0 || mm > 59) return null;
+    if (isNaN(h) || isNaN(mm) || h < 0 || h > 23 || mm < 0 || mm > 59)
+      return null;
     return h * 60 + mm;
   }
 
-/**
- * checkSlotOverlap
- * Checks if a desired slot overlaps with at least one tutor slot.
- * desired: TimeSlot (single desired)
- * tutorSlots: TimeSlot[] - tutor availability entries
- *
- * Overlap rules:
- * - A tutor slot must have the same `day` string (simple equality).
- * - Optionally allow date-specific slots like "2025-11-03" to match exact date.
- */
+  /**
+   * checkSlotOverlap
+   * Checks if a desired slot overlaps with at least one tutor slot.
+   * desired: TimeSlot (single desired)
+   * tutorSlots: TimeSlot[] - tutor availability entries
+   *
+   * Overlap rules:
+   * - A tutor slot must have the same `day` string (simple equality).
+   * - Optionally allow date-specific slots like "2025-11-03" to match exact date.
+   */
   private checkSlotOverlap(desired: TimeSlot, tutorSlots: TimeSlot[]): boolean {
     // For each tutor slot on the same day, check time overlap
     for (const t of tutorSlots) {
-        if (String(t.day).toLowerCase() !== String(desired.day).toLowerCase()) continue;
-        // overlap if startA < endB && startB < endA
-        if (desired.start < t.end && t.start < desired.end) return true;
+      if (String(t.day).toLowerCase() !== String(desired.day).toLowerCase())
+        continue;
+      // overlap if startA < endB && startB < endA
+      if (desired.start < t.end && t.start < desired.end) return true;
     }
     return false;
   }
-  
+
   /**
    * UPGRADED auto-assign algorithm
    */
@@ -199,19 +218,25 @@ export class MatchingService {
     preferredTimeSlots?: string[],
   ) {
     // 1. Find all tutors
-    const allTutors = await this.userModel.find({ role: UserRole.TUTOR }).exec();
+    const allTutors = await this.userModel
+      .find({ role: UserRole.TUTOR })
+      .exec();
 
     if (!allTutors || allTutors.length === 0) {
       return {
         assigned: false,
-        registration: await this.registrationModel.findById(registrationId).exec(),
+        registration: await this.registrationModel
+          .findById(registrationId)
+          .exec(),
         message: 'No tutors available',
       };
     }
 
     // Normalize preferred time slots (if any)
-    const desiredSlots = (preferredTimeSlots || []).map(s => this.normalizeSlotString(s)).filter(Boolean) as TimeSlot[];
-  
+    const desiredSlots = (preferredTimeSlots || [])
+      .map((s) => this.normalizeSlotString(s))
+      .filter(Boolean) as TimeSlot[];
+
     // 2) Filter tutors -> subject + optional level
     const subjectFiltered = allTutors.filter((t: any) => {
       // Tutor's preferredSubjects may be either under tutor.preferredSubjects or tutor.subjects/expertise
@@ -219,11 +244,13 @@ export class MatchingService {
         (Array.isArray(t.preferredSubjects) && t.preferredSubjects) ||
         (Array.isArray((t as any).subjects) && (t as any).subjects) ||
         (t.expertise ? [t.expertise] : []);
-      const teachesSubject = tutorSubjects.length ? tutorSubjects.map(String).includes(String(course.subject)) : true;
+      const teachesSubject = tutorSubjects.length
+        ? tutorSubjects.map(String).includes(String(course.subject))
+        : true;
 
       if (!teachesSubject) return false;
 
-        // If tutor has preferred student level set, enforce it (if student.level exists)
+      // If tutor has preferred student level set, enforce it (if student.level exists)
       if (t.preferredStudentLevel && (student as any).level) {
         if (t.preferredStudentLevel !== (student as any).level) return false;
       }
@@ -232,45 +259,54 @@ export class MatchingService {
     });
 
     if (subjectFiltered.length === 0) {
-        return {
+      return {
         assigned: false,
-        registration: await this.registrationModel.findById(registrationId).exec(),
+        registration: await this.registrationModel
+          .findById(registrationId)
+          .exec(),
         message: 'No tutors with matching subject found',
-        };
+      };
     }
 
     // 3) If desiredSlots provided, filter tutors by availability overlap
-    const availabilityFiltered = desiredSlots.length ? subjectFiltered.filter((t: any) => {
-      
-        // if tutor has no constraints, treat them as available (or decide otherwise)
-      if (!Array.isArray(t.constraints) || t.constraints.length === 0) {
-        return true; // permissive: allow tutors with no explicit constraints
-      }
-      
-      // convert tutor constraints to TimeSlot[]
-      const tutorSlots: TimeSlot[] = (t.constraints || []).map((c: any) => {
-        const start = this.parseHHMM(c.startTime);
-        const end = this.parseHHMM(c.endTime);
-        if (start === null || end === null) return null;
-        return { day: String(c.day), start, end };
-      }).filter(Boolean) as TimeSlot[];
-      
-      // Check if any desiredSlot overlaps with any tutorSlot
-      // At least one preferred slot overlaps with tutor’s available time
-      return desiredSlots.some(desired => this.checkSlotOverlap(desired, tutorSlots));
-    })
-    : subjectFiltered;
+    const availabilityFiltered = desiredSlots.length
+      ? subjectFiltered.filter((t: any) => {
+          // if tutor has no constraints, treat them as available (or decide otherwise)
+          if (!Array.isArray(t.constraints) || t.constraints.length === 0) {
+            return true; // permissive: allow tutors with no explicit constraints
+          }
+
+          // convert tutor constraints to TimeSlot[]
+          const tutorSlots: TimeSlot[] = (t.constraints || [])
+            .map((c: any) => {
+              const start = this.parseHHMM(c.startTime);
+              const end = this.parseHHMM(c.endTime);
+              if (start === null || end === null) return null;
+              return { day: String(c.day), start, end };
+            })
+            .filter(Boolean) as TimeSlot[];
+
+          // Check if any desiredSlot overlaps with any tutorSlot
+          // At least one preferred slot overlaps with tutor’s available time
+          return desiredSlots.some((desired) =>
+            this.checkSlotOverlap(desired, tutorSlots),
+          );
+        })
+      : subjectFiltered;
 
     // 4) Score candidates: prefer tutors with fewest assigned students and best subject match
     // Build a list of { tutor, load, score } maybe parallelize with Promise.all
     const scoredCandidates = await Promise.all(
       availabilityFiltered.map(async (t: any) => {
         const assignedCount = await this.registrationModel
-          .countDocuments({ tutor: t._id, status: RegistrationStatus.ASSIGNED }).exec();
+          .countDocuments({ tutor: t._id, status: RegistrationStatus.ASSIGNED })
+          .exec();
 
         // Score: lower load is better; add small bonus for exact subject match
         let score = assignedCount; // lower is better
-        const tutorSubjects = (Array.isArray(t.preferredSubjects) ? t.preferredSubjects : []).map(String);
+        const tutorSubjects = (
+          Array.isArray(t.preferredSubjects) ? t.preferredSubjects : []
+        ).map(String);
         if (tutorSubjects.includes(String(course.subject))) score -= 0.5; // prefer exact subject match
 
         return { tutor: t, assignedCount, score };
@@ -283,27 +319,31 @@ export class MatchingService {
     // 5) Iterate candidates and assign first tutor that has capacity
     for (const cand of scoredCandidates) {
       const tutor = cand.tutor as any;
-      const maxStudents = typeof tutor.maxStudents === 'number' ? tutor.maxStudents : 10; // default
+      const maxStudents =
+        typeof tutor.maxStudents === 'number' ? tutor.maxStudents : 10; // default
 
       // count current load for this tutor in this course or overall (choose policy)
       const currentCount = await this.registrationModel
-        .countDocuments({ tutor: tutor._id, status: RegistrationStatus.ASSIGNED }).exec();
+        .countDocuments({
+          tutor: tutor._id,
+          status: RegistrationStatus.ASSIGNED,
+        })
+        .exec();
 
       if (currentCount >= maxStudents) {
         continue; // tutor full
       }
 
-    // Optionally, re-check time slot availability atomically here if necessary
+      // Optionally, re-check time slot availability atomically here if necessary
 
-    // Assign the registration to this tutor
-    const reg = await this.registrationModel
+      // Assign the registration to this tutor
+      const reg = await this.registrationModel
         .findByIdAndUpdate(
           registrationId,
           { tutor: tutor._id, status: RegistrationStatus.ASSIGNED },
           { new: true },
         )
         .exec();
-
 
       return {
         assigned: true,
@@ -315,7 +355,9 @@ export class MatchingService {
     // Nothing matched capacity or constraints
     return {
       assigned: false,
-      registration: await this.registrationModel.findById(registrationId).exec(),
+      registration: await this.registrationModel
+        .findById(registrationId)
+        .exec(),
       message: 'No suitable tutor found. Your request is pending.',
     };
   }

@@ -5,5 +5,5 @@ export class RegisterDto {
   password: string;
   name: string;
   role: UserRole;
-  avatar?: string;
+  // avatar?: string;
 }
