@@ -24,6 +24,8 @@
       "@modules/*": ["src/modules/*"],
       "@common/*": ["src/common/*"],
       "@config/*": ["src/config/*"]
-    }
+    },
+    "moduleResolution": "node",
+    "types": ["node", "express", "multer"]
   }
 }

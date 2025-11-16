@@ -5,21 +5,31 @@ import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 import { Response, Request } from 'express';
+import { CloudinaryService } from '@/cloudinary/cloudinary.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private jwtService: JwtService,
     private userService: UserService,
+    private cloudinaryService: CloudinaryService,
   ) {}
 
-  async register(registerDto: RegisterDto) {
+  async register(registerDto: RegisterDto, file?: Express.Multer.File) {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(registerDto.password, salt);
+
+    let avatarUrl: string | undefined;
+
+    if (file) {
+      const uploadResult = await this.cloudinaryService.uploadFile(file);
+      avatarUrl = uploadResult.secure_url;
+    }
 
     const newUser = this.userService.createUser({
       ...registerDto,
       password: hashedPassword,
+      avatar: avatarUrl,
     });
 
     return newUser;
