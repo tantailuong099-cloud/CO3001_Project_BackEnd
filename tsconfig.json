@@ -26,6 +26,7 @@
       "@config/*": ["src/config/*"]
     },
     "moduleResolution": "node",
-    "types": ["node", "express", "multer"]
-  }
+    "types": ["node", "express", "multer", "jest"]
+  },
+  "include": ["src/**/*", "src/types/**/*.d.ts"]
 }

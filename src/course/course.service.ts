@@ -132,4 +132,18 @@ export class CourseService {
     course.students.push(student._id.toString());
     return await course.save();
   }
+  async unassignTutorFromCourse(courseId: string, tutorId: string) {
+    const course = await this.getCourseById(courseId);
+    course.tutors = course.tutors.filter(
+      (tutor) => tutor['_id'].toString() !== tutorId,
+    );
+    return await course.save();
+  }
+  async unregisterStudentForCourse(courseId: string, studentId: string) {
+    const course = await this.getCourseById(courseId);
+    course.students = course.students.filter(
+      (student) => student['_id'].toString() !== studentId,
+    );
+    return await course.save();
+  }
 }
