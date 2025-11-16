@@ -9,6 +9,7 @@ import { MaterialsModule } from './materials/materials.module';
 import { MatchingModule } from './matching/matching.module';
 import { FeedbackModule } from './feedback/feedback.module';
 import { ReportModule } from './report/report.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ReportModule } from './report/report.module';
     MatchingModule,
     FeedbackModule,
     ReportModule,
+    CloudinaryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

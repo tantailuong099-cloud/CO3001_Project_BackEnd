@@ -17,7 +17,7 @@ export class UserController {
   }
 
   @Post('update/:id')
-  async updateUserInfp(
+  async updateUserInfo(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserType,
   ) {

@@ -6,10 +6,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt/jwt.strategy';
+import { CloudinaryModule } from '@/cloudinary/cloudinary.module';
 
 @Module({
   imports: [
     UserModule,
+    CloudinaryModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

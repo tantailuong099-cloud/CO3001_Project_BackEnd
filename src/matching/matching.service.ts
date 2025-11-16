@@ -1,15 +1,21 @@
 // src\matching\matching.service.ts
 
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Registration, RegistrationDocument, RegistrationStatus } from './schema/registration.schema';
+import {
+  Registration,
+  RegistrationDocument,
+  RegistrationStatus,
+} from './schema/registration.schema';
 import { RegisterProgramDto } from './dto/register-program.dto';
 import { SetScheduleDto } from './dto/set-schedule.dto';
 import { User, UserRole, UserDocument } from '@/user/schema/user.schema';
 import { Course, CourseDocument } from '@/course/schema/course.schema';
-import { Tutor, TutorDocument } from '@/user/schema/tutor.schema'; 
-
 
 @Injectable()
 export class MatchingService {
@@ -36,10 +42,15 @@ export class MatchingService {
 
     // Ensure registration period is active
     const now = new Date();
-    if (now < new Date(course.registrationStart) || now > new Date(course.registrationEnd)) {
-      throw new BadRequestException('Registration period is not active for this course');
+    if (
+      now < new Date(course.registrationStart) ||
+      now > new Date(course.registrationEnd)
+    ) {
+      throw new BadRequestException(
+        'Registration period is not active for this course',
+      );
     }
-    
+
     // Validate student exists and is actually a student
     const student = await this.userModel.findById(studentId).lean();
     if (!student) throw new NotFoundException('Student user not found');
@@ -65,7 +76,9 @@ export class MatchingService {
     } else {
       // Avoid duplicate registration
       if (registration.students.includes(studentId)) {
-        throw new BadRequestException('Student already registered for this course');
+        throw new BadRequestException(
+          'Student already registered for this course',
+        );
       }
 
       // Check capacity
@@ -97,9 +110,12 @@ export class MatchingService {
 
     // Check tutor is assigned
     //    * If course.tutors is missing or not an array, it immediately fails.
-    //    * If it is an array, it converts all tutor IDs to strings 
+    //    * If it is an array, it converts all tutor IDs to strings
     // (important if they’re stored as ObjectIds) and checks membership safely.
-    if (!Array.isArray(course.tutors) || !course.tutors.map(String).includes(String(tutorId))) {
+    if (
+      !Array.isArray(course.tutors) ||
+      !course.tutors.map(String).includes(String(tutorId))
+    ) {
       throw new BadRequestException('You are not assigned to this course');
     }
 
@@ -140,8 +156,6 @@ export class MatchingService {
     return this.courseModel.find({ tutors: tutorId }).lean();
   }
 }
-
-
 
 // type TimeSlot = { day: string; start: number; end: number }; // start, end as minutes from 00:00
 
@@ -242,7 +256,7 @@ export class MatchingService {
 //       message: assigned.message,
 //     };
 //   }
-  
+
 //   /**
 //    * Tutor updates constraints
 //    */
@@ -269,7 +283,6 @@ export class MatchingService {
 //     return { success: true, message: 'Constraints updated successfully', tutor: updatedTutor };
 //   }
 
-
 //   /* ----------------------
 //    Helper types & methods
 //    ---------------------- */
@@ -293,7 +306,6 @@ export class MatchingService {
 //     if (start === null || end === null || start >= end) return null; // Add check for start >= end
 //     return { day, start, end };
 //   }
-
 
 // /**
 //  * parseHHMM: "09:30" -> 570 (minutes since midnight). returns number or null.
@@ -327,7 +339,7 @@ export class MatchingService {
 //     }
 //     return false;
 //   }
-  
+
 //   /**
 //    * UPGRADED auto-assign algorithm
 //    */
@@ -350,7 +362,7 @@ export class MatchingService {
 
 //     // Normalize preferred time slots (if any)
 //     const desiredSlots = (preferredTimeSlots || []).map(s => this.normalizeSlotString(s)).filter(Boolean) as TimeSlot[];
-  
+
 //     // 2) Filter tutors -> subject + optional level
 //     const subjectFiltered = allTutors.filter((t: any) => {
 //       // Tutor's preferredSubjects may be either under tutor.preferredSubjects or tutor.subjects/expertise
@@ -380,12 +392,12 @@ export class MatchingService {
 
 //     // 3) If desiredSlots provided, filter tutors by availability overlap
 //     const availabilityFiltered = desiredSlots.length ? subjectFiltered.filter((t: any) => {
-      
+
 //         // if tutor has no constraints, treat them as available (or decide otherwise)
 //       if (!Array.isArray(t.constraints) || t.constraints.length === 0) {
 //         return true; // permissive: allow tutors with no explicit constraints
 //       }
-      
+
 //       // convert tutor constraints to TimeSlot[]
 //       const tutorSlots: TimeSlot[] = (t.constraints || []).map((c: any) => {
 //         const start = this.parseHHMM(c.startTime);
@@ -393,7 +405,7 @@ export class MatchingService {
 //         if (start === null || end === null) return null;
 //         return { day: String(c.day), start, end };
 //       }).filter(Boolean) as TimeSlot[];
-      
+
 //       // Check if any desiredSlot overlaps with any tutorSlot
 //       // At least one preferred slot overlaps with tutor’s available time
 //       return desiredSlots.some(desired => this.checkSlotOverlap(desired, tutorSlots));
@@ -442,7 +454,6 @@ export class MatchingService {
 //           { new: true },
 //         )
 //         .exec();
-
 
 //       return {
 //         assigned: true,

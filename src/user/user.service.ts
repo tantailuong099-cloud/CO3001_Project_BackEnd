@@ -14,7 +14,9 @@ import { Tutor, TutorDocument } from './schema/tutor.schema';
 import { Student, StudentDocument } from './schema/student.schema';
 import { Admin, AdminDocument } from './schema/admin.schema';
 
-export type UpdateUserType = UpdateQuery<Partial<User | Tutor | Student | Admin>>;
+export type UpdateUserType = UpdateQuery<
+  Partial<User | Tutor | Student | Admin>
+>;
 
 @Injectable()
 export class UserService {
