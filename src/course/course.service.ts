@@ -1,3 +1,5 @@
+// src\course\course.service.ts
+
 import {
   Injectable,
   InternalServerErrorException,
@@ -96,17 +98,8 @@ export class CourseService {
       throw new BadRequestException('User is not a tutor');
     }
 
-    await this.userService.updateUserInfo(tutorId, {
-      $addToSet: { courses: courseId as any },
-    });
-
-    return this.courseModel
-      .findByIdAndUpdate(
-        courseId,
-        { $addToSet: { tutors: tutorId } }, 
-        { new: true },
-      )
-      .exec();
+    course.tutors.push(tutor._id.toString());
+    return await course.save();
   }
 
   //Register
@@ -136,47 +129,7 @@ export class CourseService {
       throw new BadRequestException('User is not a student');
     }
 
-    await this.userService.updateUserInfo(studentId, {
-      $addToSet: { class: courseId as any },
-    });
-
-    return this.courseModel
-      .findByIdAndUpdate(
-        courseId,
-        { $addToSet: { students: studentId } },
-        { new: true },
-      )
-      .exec();
-  }
-
-
-  //Unassign Tutor
-  async unassignTutorFromCourse(courseId: string, tutorId: string) {
-    await this.userService.updateUserInfo(tutorId, {
-      $pull: { courses: courseId as any },
-    });
-
-    return this.courseModel
-      .findByIdAndUpdate(
-        courseId,
-        { $pull: { tutors: tutorId } },
-        { new: true },
-      )
-      .exec();
-  }
-
-  //Unregister Student
-  async unregisterStudentForCourse(courseId: string, studentId: string) {
-    await this.userService.updateUserInfo(studentId, {
-      $pull: { class: courseId as any },
-    });
-
-    return this.courseModel
-      .findByIdAndUpdate(
-        courseId,
-        { $pull: { students: studentId } },
-        { new: true },
-      )
-      .exec();
+    course.students.push(student._id.toString());
+    return await course.save();
   }
 }
