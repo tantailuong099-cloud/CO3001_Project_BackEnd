@@ -1,10 +1,6 @@
 // src\course\schema\course.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import * as mongoose from 'mongoose'; 
-import { User } from '@/user/schema/user.schema'; 
-import * as mongoose from 'mongoose'; 
-import { User } from '@/user/schema/user.schema'; 
 
 @Schema({ timestamps: true })
 export class Course {
@@ -26,19 +22,14 @@ export class Course {
   @Prop({ required: true })
   semester: string; // e.g. "2025 Spring"
 
-  @Prop({ required: true })
-  classGroup: string; // e.g. "A" or "B" — one tutor per class group
-
+  // NEW: list of class group identifiers for this course (e.g. ["A","B","C"])
   @Prop({ type: [String], default: [] })
-  schedule: string[];
+  classGroups: string[];
 
   @Prop({ required: true, default: 30 })
   capacity: number;
 
   // --- Registration period ---
-  @Prop({ default: 0 })
-  registeredCount: number;
-
   @Prop({ required: true })
   registrationStart: Date;
 
@@ -53,11 +44,9 @@ export class Course {
   courseEnd: Date;
 
   // --- Relationships ---
+  // Keep tutors as potential tutors (not assigned to specific classGroup)
   @Prop({ type: [String], default: [] })
   tutors: string[];
-
-  @Prop({ type: [String], default: [] })
-  students: string[];
 
   // --- Status ---
   @Prop({
@@ -65,8 +54,6 @@ export class Course {
   })
   status: string;
 }
-
-
 
 export type CourseDocument = HydratedDocument<Course>;
 export const CourseSchema = SchemaFactory.createForClass(Course);

@@ -1,14 +1,7 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Delete,
-  Patch,
-  UseGuards,
-  Req,
-  ForbiddenException,
+// CO3001_Project_BackEnd_main\src\course\course.controller.ts
+
+import { 
+  Body, Controller, Get, Param, Post, Delete, Patch, UseGuards, Req, ForbiddenException 
 } from '@nestjs/common';
 import { CourseService } from './course.service';
 import { CreateCourseDto } from './dto/create-course.dto';
@@ -25,14 +18,22 @@ interface AuthRequest extends Request {
     role: UserRole;
   };
 }
+
 @Controller('course')
 export class CourseController {
   constructor(private readonly courseService: CourseService) {}
 
+  // ------------------------------
+  // COURSE CRUD
+  // ------------------------------
+
   @UseGuards(JwtAuthGuard) 
   @Post('create')
-  async createCourse(@Body() createCourseDto: CreateCourseDto, @Req() req: AuthRequest) {
-    return this.courseService.createCourse(createCourseDto);
+  async createCourse(@Body() dto: CreateCourseDto, @Req() req: AuthRequest) {
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only Admins can create courses');
+    }
+    return this.courseService.createCourse(dto);
   }
 
   @Get()
@@ -49,71 +50,74 @@ export class CourseController {
   @Patch('update/:id')
   async updateCourse(
     @Param('id') id: string,
-    @Body() updateCourseDto: UpdateCourseDto,
+    @Body() dto: UpdateCourseDto,
     @Req() req: AuthRequest,
   ) {
-    if (req.user.role !== 'Admin') {
+    if (req.user.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admins can update courses');
     }
-    return this.courseService.updateCourse(id, updateCourseDto);
+    return this.courseService.updateCourse(id, dto);
   }
 
   @UseGuards(JwtAuthGuard) 
   @Delete('delete/:id')
   async deleteCourse(@Param('id') id: string, @Req() req: AuthRequest) {
-    if (req.user.role !== 'Admin') {
+    if (req.user.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admins can delete courses');
     }
     return this.courseService.deleteCourse(id);
   }
 
-  @UseGuards(JwtAuthGuard) 
-  @Post(':id/assign-tutor')
-  async assignTutorToCourse(
-    @Param('id') id: string,
-    @Body() assignTutorDto: AssignTutorDto,
-    @Req() req: AuthRequest,
-  ) {
-    if (req.user.role !== 'Admin') {
-      throw new ForbiddenException('Only Admins can assign tutors');
-    }
-    return this.courseService.assignTutorToCourse(id, assignTutorDto.courseId);
-  }
+  // @UseGuards(JwtAuthGuard)
+  // @Post(':id/assign-tutor')
+  // async assignTutor(
+  //   @Param('id') id: string,
+  //   @Body() assignTutorDto: AssignTutorDto,
+  //   @Req() req: AuthRequest,
+  // ) {
+  //   if (req.user.role !== UserRole.ADMIN)
+  //     throw new ForbiddenException('Only Admins can assign tutors');
+  //   return this.courseService.assignTutorToCourse(
+  //     id,
+  //     assignTutorDto.classGroup,
+  //     assignTutorDto.tutorId,
+  //     assignTutorDto.sessions,
+  //   );
+  // }
 
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/unassign-tutor')
-  async unassignTutorFromCourse(
-    @Param('id') id: string,
-    @Body() assignTutorDto: AssignTutorDto, 
-    @Req() req: AuthRequest,
-  ) {
-    if (req.user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only admins can unassign tutors');
-    }
-    return this.courseService.unassignTutorFromCourse(
-      id,
-      assignTutorDto.courseId,
-    );
-  }
+  // @UseGuards(JwtAuthGuard)
+  // @Post(':id/unassign-tutor')
+  // async unassignTutor(
+  //   @Param('id') id: string,
+  //   @Body() assignTutorDto: AssignTutorDto,
+  //   @Req() req: AuthRequest,
+  // ) {
+  //   if (req.user.role !== UserRole.ADMIN)
+  //     throw new ForbiddenException('Only Admins can unassign tutors');
+  //   return this.courseService.unassignTutorFromCourse(id, assignTutorDto.classGroup);
+  // }
 
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/register')
-  async registerStudent(@Param('id') id: string, @Req() req: AuthRequest) {
-    if (req.user.role !== UserRole.STUDENT) {
-      throw new ForbiddenException('Only students can register for courses');
-    }
-    const studentId = req.user.userId;
-    return this.courseService.registerStudentForCourse(id, studentId);
-  }
+  // @UseGuards(JwtAuthGuard)
+  // @Post(':id/register')
+  // async registerStudent(
+  //   @Param('id') id: string,
+  //   @Body('classGroup') classGroup: string,
+  //   @Req() req: AuthRequest,
+  // ) {
+  //   if (req.user.role !== UserRole.STUDENT)
+  //     throw new ForbiddenException('Only students can register');
+  //   return this.courseService.registerStudentForCourse(id, classGroup, req.user.userId);
+  // }
 
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/unregister')
-  async unregisterStudent(@Param('id') id: string, @Req() req: AuthRequest) {
-    if (req.user.role !== UserRole.STUDENT) {
-      throw new ForbiddenException('Only students can unregister');
-    }
-    const studentId = req.user.userId;
-    return this.courseService.unregisterStudentForCourse(id, studentId);
-  }
-
+  // @UseGuards(JwtAuthGuard)
+  // @Post(':id/unregister')
+  // async unregisterStudent(
+  //   @Param('id') id: string,
+  //   @Body('classGroup') classGroup: string,
+  //   @Req() req: AuthRequest,
+  // ) {
+  //   if (req.user.role !== UserRole.STUDENT)
+  //     throw new ForbiddenException('Only students can unregister');
+  //   return this.courseService.unregisterStudentForCourse(id, classGroup, req.user.userId);
+  // }
 }

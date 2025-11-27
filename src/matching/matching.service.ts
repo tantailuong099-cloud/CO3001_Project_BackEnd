@@ -1,21 +1,17 @@
 // src\matching\matching.service.ts
 
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import {
-  Registration,
-  RegistrationDocument,
-  RegistrationStatus,
-} from './schema/registration.schema';
+import { Model, Types } from 'mongoose';
+import { Registration, RegistrationDocument, RegistrationStatus } from './schema/registration.schema';
 import { RegisterProgramDto } from './dto/register-program.dto';
 import { SetScheduleDto } from './dto/set-schedule.dto';
 import { User, UserRole, UserDocument } from '@/user/schema/user.schema';
 import { Course, CourseDocument } from '@/course/schema/course.schema';
+
+
+type Session  = { day: string; startTime: string; endTime: string };
+type TimeSlot = { day: string; start:     number; end:     number };
 
 @Injectable()
 export class MatchingService {
@@ -30,110 +26,286 @@ export class MatchingService {
     private readonly userModel: Model<UserDocument>,
   ) {}
 
-  /**
-   * STUDENT registers for a course/classGroup.
-   * If the class group already has a registration doc, append the student.
-   * If not, create one.
-   */
 
+  /* -------------------
+     Helper utilities
+     ------------------- */
+
+  private parseHHMM(hhmm: string): number | null {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
+    if (!m) return null;
+    const h = Number(m[1]);
+    const mm = Number(m[2]);
+    if (Number.isNaN(h) || Number.isNaN(mm) || h < 0 || h > 23 || mm < 0 || mm > 59)
+      return null;
+    return h * 60 + mm;
+  }
+
+  private sessionsToSlots(sessions: Session[]): (TimeSlot | null)[] {
+    return sessions.map((s) => {
+      const start = this.parseHHMM(s.startTime);
+      const end = this.parseHHMM(s.endTime);
+      if (start === null || end === null) return null;
+      return { day: s.day.trim().toLowerCase(), start, end };
+    });
+  }
+
+  /**
+   * Validate sessions: start < end, no duplicate days, no overlaps inside array
+   */
+  private validateSessionsOrThrow(sessions: Session[]) {
+    if (!Array.isArray(sessions) || sessions.length === 0) {
+      throw new BadRequestException('No sessions provided');
+    }
+
+    const slots = this.sessionsToSlots(sessions);
+    if (slots.some((s) => s === null)) {
+      throw new BadRequestException('Invalid session time format. Use "HH:MM".');
+    }
+
+    const seenDays = new Map<string, TimeSlot[]>();
+    for (const s of slots as TimeSlot[]) {
+      if (s.start >= s.end) {
+        throw new BadRequestException(
+          `Session startTime must be before endTime (day=${s.day}, ${s.start} >= ${s.end})`,
+        );
+      }
+      const arr = seenDays.get(s.day) || [];
+      // check overlap with existing on same day
+      for (const other of arr) {
+        if (s.start < other.end && other.start < s.end) {
+          throw new BadRequestException(
+            `Overlapping sessions on ${s.day}: ${s.start} - ${s.end} conflicts with ${other.start} - ${other.end}`,
+          );
+        }
+      }
+      arr.push(s);
+      seenDays.set(s.day, arr);
+    }
+  }
+  
+  /**
+   * Check overlap between two session arrays (used for tutor conflict checking).
+   * Returns true when any overlap exists.
+   */
+  private sessionsOverlap(a: Session[], b: Session[]) {
+    const aSlots = this.sessionsToSlots(a).filter(Boolean) as TimeSlot[];
+    const bSlots = this.sessionsToSlots(b).filter(Boolean) as TimeSlot[];
+
+    for (const x of aSlots) {
+      for (const y of bSlots) {
+        if (x.day !== y.day) continue;
+        if (x.start < y.end && y.start < x.end) return true;
+      }
+    }
+    return false;
+  }
+
+  /* -------------------
+     Core business methods
+     ------------------- */
+
+  /**
+   * Register a student into a class group (atomic when registration exists).
+   * Business rules enforced:
+   *  - course must exist
+   *  - classGroup must be listed in course.classGroups
+   *  - registration period must be active
+   *  - student must exist and have role STUDENT
+   *  - student cannot be registered in another class group of the same course
+   *  - class capacity respected
+   *  - duplicate registration prevented
+   */
+  
   async registerStudent(studentId: string, dto: RegisterProgramDto) {
+    
+    // validate course
     const course = await this.courseModel.findById(dto.course).lean();
     if (!course) throw new NotFoundException('Course not found');
 
+    // validate classGroup exists on course
+    if (!Array.isArray(course.classGroups) || !course.classGroups.includes(dto.classGroup)) {
+      throw new BadRequestException('Invalid class group for this course');
+    }
+
     // Ensure registration period is active
     const now = new Date();
-    if (
-      now < new Date(course.registrationStart) ||
-      now > new Date(course.registrationEnd)
-    ) {
-      throw new BadRequestException(
-        'Registration period is not active for this course',
-      );
+    if (now < new Date(course.registrationStart) || now > new Date(course.registrationEnd)) {
+      throw new BadRequestException('Registration period is not active for this course');
     }
 
     // Validate student exists and is actually a student
     const student = await this.userModel.findById(studentId).lean();
     if (!student) throw new NotFoundException('Student user not found');
-    if ((student as any).role && (student as any).role !== UserRole.STUDENT) {
+    if ((student as any).role !== UserRole.STUDENT) {
       throw new BadRequestException('Only students can register for courses');
     }
 
-    // Find existing registration record for this course/classGroup
+    // Prevent student from being registered to another class group of same course
+    const otherReg = await this.registrationModel.findOne({
+      course: dto.course,
+      students: studentId,
+      classGroup: { $ne: dto.classGroup },
+    });
+    if (otherReg) {
+      throw new ConflictException(
+        `Student already registered in class group "${otherReg.classGroup}" for this course`,
+      );
+    }
+
+    // Attempt atomic update if registration doc exists
     let registration = await this.registrationModel.findOne({
-      course: course._id.toString(),
-      classGroup: course.classGroup,
+      course: dto.course,
+      classGroup: dto.classGroup,
     });
 
-    if (!registration) {
-      // Create new registration record for this class group
-      registration = new this.registrationModel({
-        course: course._id.toString(),
-        classGroup: course.classGroup,
-        tutor: course.tutors?.[0] || null,
-        students: [studentId],
-        status: RegistrationStatus.ASSIGNED,
-      });
-    } else {
-      // Avoid duplicate registration
-      if (registration.students.includes(studentId)) {
-        throw new BadRequestException(
-          'Student already registered for this course',
-        );
-      }
+    if (registration) {
+      // Use findOneAndUpdate atomically: ensure student not present and registeredCount < capacity
+      const updated = await this.registrationModel.findOneAndUpdate(
+        {
+          _id: registration._id,
+          students: { $ne: studentId },
+          registeredCount: { $lt: course.capacity || Number.MAX_SAFE_INTEGER },
+        },
+        {
+          $push: { students: studentId },
+          $inc: { registeredCount: 1 },
+          // if status should become ACTIVE once at least one student registers:
+          $set: { status: RegistrationStatus.ACTIVE },
+        },
+        { new: true },
+      );
 
-      // Check capacity
-      if (registration.students.length >= course.capacity) {
+      if (!updated) {
+        // If update failed, determine reason
+        // check if student already present
+        const existing = await this.registrationModel.findOne({
+          _id: registration._id,
+          students: studentId,
+        });
+        if (existing) throw new BadRequestException('Student already registered for this class group');
+
+        // otherwise capacity likely full
         throw new BadRequestException('Class is already full');
       }
 
-      registration.students.push(studentId);
+      return { message: 'Student successfully registered', registration: updated };
     }
 
-    // Save registration
-    await registration.save();
-
-    // Increment registeredCount in course
-    await this.courseModel.updateOne(
-      { _id: course._id },
-      { $inc: { registeredCount: 1 } },
-    );
-
-    return { message: 'Student successfully registered', registration };
+    // If registration doc missing (fallback) create it (we assume up-front course creation usually creates them)
+    const created = new this.registrationModel({
+      course: dto.course,
+      classGroup: dto.classGroup,
+      students: [studentId],
+      tutor: dto.tutor || null,
+      sessions: [],
+      registeredCount: 1,
+      status: RegistrationStatus.ACTIVE,
+    });
+    await created.save();
+    return { message: 'Student successfully registered (created registration)', registration: created };
   }
 
   /**
-   *  TUTOR sets schedule for their assigned course/classGroup.
+   * Unregister student from class group.
+   * Rules:
+   *  - course must exist
+   *  - unregister only allowed during registration period
+   *  - student must currently be registered in that registration doc
+   *  - operation is atomic
    */
-  async setSchedule(tutorId: string, dto: SetScheduleDto) {
-    const course = await this.courseModel.findById(dto.courseId);
+  async unregisterStudent(studentId: string, courseId: string, classGroup: string) {
+    const course = await this.courseModel.findById(courseId).lean();
     if (!course) throw new NotFoundException('Course not found');
 
-    // Check tutor is assigned
-    //    * If course.tutors is missing or not an array, it immediately fails.
-    //    * If it is an array, it converts all tutor IDs to strings
-    // (important if they’re stored as ObjectIds) and checks membership safely.
-    if (
-      !Array.isArray(course.tutors) ||
-      !course.tutors.map(String).includes(String(tutorId))
-    ) {
-      throw new BadRequestException('You are not assigned to this course');
+    const now = new Date();
+    if (now < new Date(course.registrationStart) || now > new Date(course.registrationEnd)) {
+      throw new BadRequestException('You can only unregister during the registration period');
     }
 
-    // Validate sessions: non-empty array
-    if (!Array.isArray(dto.sessions) || dto.sessions.length === 0) {
-      throw new BadRequestException('No sessions provided');
-    }
-
-    // Convert sessions to readable string format
-    const scheduleStrings = dto.sessions.map(
-      (s) => `${s.day} ${s.startTime}-${s.endTime}`,
+    // atomic pull
+    const updated = await this.registrationModel.findOneAndUpdate(
+      {
+        course: courseId,
+        classGroup,
+        students: studentId, // ensure present
+      },
+      {
+        $pull: { students: studentId },
+        $inc: { registeredCount: -1 },
+      },
+      { new: true },
     );
 
-    course.schedule = scheduleStrings;
-    await course.save();
+    if (!updated) {
+      // determine reason
+      const reg = await this.registrationModel.findOne({ course: courseId, classGroup });
+      if (!reg) throw new NotFoundException('Registration not found');
+      if (!reg.students.includes(studentId)) throw new BadRequestException('Student not registered in this class group');
+      // fallback
+      throw new BadRequestException('Unable to unregister student');
+    }
 
-    return { message: 'Schedule successfully set', schedule: course.schedule };
+    // If after removal there are 0 students, optionally set status back to CREATED or TUTOR_ASSIGNED
+    if ((updated.registeredCount || 0) <= 0) {
+      // keep tutor assignment, but set status to TUTOR_ASSIGNED or CREATED depending on whether tutor exists
+      updated.status = updated.tutor ? RegistrationStatus.TUTOR_ASSIGNED : RegistrationStatus.CREATED;
+      await updated.save();
+    }
+
+    return { message: 'Student successfully unregistered', registration: updated };
   }
+
+
+  /**
+   * Tutor sets schedule for their assigned course/classGroup.
+   * Rules enforced:
+   *  - registration exists and tutor is assigned to that class group
+   *  - provided sessions are valid (start < end, no duplicate/overlaps)
+   *  - tutor has no schedule conflicts with other assigned class groups
+   */
+  async setSchedule(tutorId: string, dto: SetScheduleDto) {
+    // validate registration exists and tutor is assigned
+    const registration = await this.registrationModel.findOne({
+      course: dto.courseId,
+      classGroup: dto.classGroup,
+      tutor: tutorId,
+    });
+
+    if (!registration) throw new NotFoundException('You are not assigned to this class group');
+
+    // Validate sessions structure & intra-session rules
+    this.validateSessionsOrThrow(dto.sessions);
+
+    // Check tutor conflicts: find other registrations where tutor is assigned and sessions overlap
+    const otherRegs = await this.registrationModel.find({
+      tutor: tutorId,
+      _id: { $ne: registration._id },
+      sessions: { $exists: true },
+    }).lean();
+
+    for (const other of otherRegs) {
+      if (other.sessions && this.sessionsOverlap(other.sessions as Session[], dto.sessions)) {
+        throw new BadRequestException(
+          `Schedule conflicts with tutor's other class group (${other.course} / ${other.classGroup})`,
+        );
+      }
+    }
+
+    // Save sessions
+    registration.sessions = dto.sessions;
+    // If tutor is assigned and sessions exist, set TUTOR_ASSIGNED or ACTIVE remains as is
+    registration.status = registration.status === RegistrationStatus.ACTIVE
+      ? RegistrationStatus.ACTIVE
+      : RegistrationStatus.TUTOR_ASSIGNED;
+    await registration.save();
+
+    return { message: 'Schedule successfully set', schedule: registration.sessions };
+  }
+
+  /* -------------------
+     Query helpers
+     ------------------- */
 
   /**
    * Get all registrations (for admin or tutor)
@@ -153,348 +325,86 @@ export class MatchingService {
    * Get tutor’s assigned courses
    */
   async getTutorCourses(tutorId: string) {
-    return this.courseModel.find({ tutors: tutorId }).lean();
+    // Return registration documents (rosters) where tutor is assigned
+    return this.registrationModel.find({ tutor: tutorId }).lean();
+  }
+
+
+  /* -------------------
+     Admin operations
+     ------------------- */
+
+  /**
+   * Assign a tutor to a classGroup.
+   * Rules:
+   *  - course & classGroup must exist
+   *  - tutor must exist and have TUTOR role
+   *  - optionally check current sessions for conflicts (if registration has sessions or other reg has sessions)
+   */
+  async assignTutor(tutorId: string, courseId: string, classGroup: string) {
+    const course = await this.courseModel.findById(courseId).lean();
+    if (!course) throw new NotFoundException('Course not found');
+
+    // Validate classGroup
+    if (!Array.isArray(course.classGroups) || !course.classGroups.includes(classGroup)) {
+      throw new BadRequestException('Invalid class group for this course');
+    }
+
+    // Tutor validation
+    const tutor = await this.userModel.findById(tutorId).lean();
+    if (!tutor || tutor.role !== UserRole.TUTOR) throw new BadRequestException('Invalid tutor');
+
+    // Load or create registration
+    let registration = await this.registrationModel.findOne({ course: courseId, classGroup });
+    if (!registration) {
+      // Create new empty registration with tutor
+      registration = new this.registrationModel({
+        course: courseId,
+        classGroup,
+        tutor: tutorId,
+        students: [],
+        sessions: [],
+        registeredCount: 0,
+        status: RegistrationStatus.TUTOR_ASSIGNED,
+      });
+      await registration.save();
+      return { message: 'Tutor assigned and registration created', registration };
+    }
+
+    // If registration has sessions, ensure assigning tutor doesn't conflict with tutor's other schedules
+    if (Array.isArray(registration.sessions) && registration.sessions.length > 0) {
+      // find other regs for this tutor and check overlap
+      const otherRegs = await this.registrationModel.find({ tutor: tutorId, _id: { $ne: registration._id } }).lean();
+      for (const other of otherRegs) {
+        if (other.sessions && this.sessionsOverlap(other.sessions as Session[], registration.sessions as Session[])) {
+          throw new BadRequestException('Tutor schedule conflict with another assigned class group');
+        }
+      }
+    }
+
+    registration.tutor = tutorId;
+    registration.status = registration.registeredCount && registration.registeredCount > 0
+      ? RegistrationStatus.ACTIVE
+      : RegistrationStatus.TUTOR_ASSIGNED;
+    await registration.save();
+
+    return { message: 'Tutor assigned', registration };
+  }
+  
+  /**
+   * Unassign tutor from a class group (admin)
+   */
+  async unassignTutor(courseId: string, classGroup: string) {
+    const registration = await this.registrationModel.findOne({ course: courseId, classGroup });
+    if (!registration) throw new NotFoundException('Class group registration not found');
+
+    registration.tutor = null;
+    registration.sessions = [];
+    registration.status = registration.registeredCount && registration.registeredCount > 0
+      ? RegistrationStatus.ACTIVE
+      : RegistrationStatus.CREATED;
+    await registration.save();
+
+    return { message: 'Tutor unassigned', registration };
   }
 }
-
-// type TimeSlot = { day: string; start: number; end: number }; // start, end as minutes from 00:00
-
-// @Injectable()
-// export class MatchingService {
-//   constructor(
-//     @InjectModel(Registration.name)
-//     private readonly registrationModel: Model<RegistrationDocument>,
-
-//     @InjectModel(User.name)
-//     private readonly userModel: Model<UserDocument>,
-
-//     @InjectModel(Course.name)
-//     private readonly courseModel: Model<CourseDocument>,
-//   ) {}
-
-//   /**
-//    * Register a student for a program. If tutorId provided, attach it.
-//    * If no tutor provided, attempt auto assignment.
-//    */
-//   async registerStudent(createDto: RegisterProgramDto, studentId: string) {
-//     const { course: courseId, tutor: tutorId, preferredTimeSlots } = createDto;
-
-//     // Validate course
-//     const course = await this.courseModel.findById(courseId).exec();
-//     if (!course) throw new NotFoundException('Course/program not found');
-
-//     // Validate student
-//     const student = await this.userModel.findById(studentId).exec();
-//     if (!student) throw new NotFoundException('Student not found');
-
-//     if (student.role !== UserRole.STUDENT) {
-//       throw new BadRequestException('Only students can register for a course.');
-//     }
-
-//     // Check capacity (using the field from your course.schema.ts)
-//     const currentCount = await this.registrationModel.countDocuments({
-//       course: courseId,
-//       status: RegistrationStatus.ASSIGNED, // Use enum
-//     });
-
-//     if (currentCount >= course.capacity) {
-//       throw new BadRequestException('This program is full.');
-//     }
-
-//     // If student already registered for same course, we can decide what to do.
-//     const existing = await this.registrationModel.findOne({ course: courseId, student: studentId }).exec();
-//     if (existing) {
-//       throw new BadRequestException('Student already registered for this course');
-//     }
-
-//     // If tutor explicitly chosen, validate tutor
-//     if (tutorId) {
-//       const tutor = await this.userModel.findById(tutorId).exec();
-//       if (!tutor) throw new NotFoundException('Tutor not found');
-
-//       // Optionally check tutor role
-//       if (tutor.role !== UserRole.TUTOR) {
-//         throw new BadRequestException('Selected user is not a tutor');
-//       }
-
-//       // Create registration with specified tutor
-//       const reg = new this.registrationModel({
-//         student: studentId,
-//         tutor: tutorId,
-//         course: courseId,
-//         status: RegistrationStatus.ASSIGNED,
-//       });
-
-//       await reg.save();
-
-//       return {
-//         assigned: true,
-//         registration: reg,
-//         message: 'Registered and assigned to selected tutor',
-//       };
-//     }
-
-//     // No tutor chosen -> create pending registration and try auto-assign
-//     const pendingReg = new this.registrationModel({
-//       student: studentId,
-//       course: courseId,
-//       status: RegistrationStatus.PENDING,
-//     });
-//     await pendingReg.save();
-
-//     // Attempt auto-assignment
-//     const assigned = await this.autoAssignTutor(
-//       course,
-//       student,
-//       pendingReg._id,
-//       preferredTimeSlots,
-//     );
-
-//     return {
-//       assigned: assigned.assigned,
-//       registration: assigned.registration,
-//       message: assigned.message,
-//     };
-//   }
-
-//   /**
-//    * Tutor updates constraints
-//    */
-//   async setConstraints(tutorId: string, dto: SetScheduleDto) {
-//     const { preferredSubjects, constraints, preferredStudentLevel } = dto;
-
-//     // Build an update object based on the fields provided in the DTO
-//     // This correctly maps to your new tutor.schema.ts
-//     const updateData: any = {};
-//     if (preferredSubjects) updateData.preferredSubjects = preferredSubjects;
-//     if (constraints) updateData.constraints = constraints;
-//     if (preferredStudentLevel) updateData.preferredStudentLevel = preferredStudentLevel;
-
-//     const updatedTutor = await this.userModel.findOneAndUpdate(
-//       { _id: tutorId, role: UserRole.TUTOR }, // Ensure we only update tutors
-//       { $set: updateData },
-//       { new: true, runValidators: true },
-//     ).exec();
-
-//     if (!updatedTutor) {
-//       throw new NotFoundException('Tutor not found');
-//     }
-
-//     return { success: true, message: 'Constraints updated successfully', tutor: updatedTutor };
-//   }
-
-//   /* ----------------------
-//    Helper types & methods
-//    ---------------------- */
-
-//   /**
-//    * normalizeSlotString
-//    * Accepts strings like "Monday|09:00-11:00" or "2025-11-03|14:00-16:00".
-//    * Returns a TimeSlot or null on parse error.
-//    */
-
-//   private normalizeSlotString(slot: string): TimeSlot | null {
-//     if (!slot || typeof slot !== 'string') return null;
-//     const parts = slot.split('|');
-//     if (parts.length !== 2) return null;
-//     const day = parts[0].trim();
-//     const timeRange = parts[1].trim();
-//     const [startStr, endStr] = timeRange.split('-').map((s) => s.trim());
-//     if (!startStr || !endStr) return null;
-//     const start = this.parseHHMM(startStr);
-//     const end = this.parseHHMM(endStr);
-//     if (start === null || end === null || start >= end) return null; // Add check for start >= end
-//     return { day, start, end };
-//   }
-
-// /**
-//  * parseHHMM: "09:30" -> 570 (minutes since midnight). returns number or null.
-//  * Keep it simple and timezone-agnostic since we store local times as strings.
-//  */
-//   private parseHHMM(hhmm: string): number | null {
-//     const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
-//     if (!m) return null;
-//     const h = Number(m[1]);
-//     const mm = Number(m[2]);
-//     if (isNaN(h) || isNaN(mm) || h < 0 || h > 23 || mm < 0 || mm > 59) return null;
-//     return h * 60 + mm;
-//   }
-
-// /**
-//  * checkSlotOverlap
-//  * Checks if a desired slot overlaps with at least one tutor slot.
-//  * desired: TimeSlot (single desired)
-//  * tutorSlots: TimeSlot[] - tutor availability entries
-//  *
-//  * Overlap rules:
-//  * - A tutor slot must have the same `day` string (simple equality).
-//  * - Optionally allow date-specific slots like "2025-11-03" to match exact date.
-//  */
-//   private checkSlotOverlap(desired: TimeSlot, tutorSlots: TimeSlot[]): boolean {
-//     // For each tutor slot on the same day, check time overlap
-//     for (const t of tutorSlots) {
-//         if (String(t.day).toLowerCase() !== String(desired.day).toLowerCase()) continue;
-//         // overlap if startA < endB && startB < endA
-//         if (desired.start < t.end && t.start < desired.end) return true;
-//     }
-//     return false;
-//   }
-
-//   /**
-//    * UPGRADED auto-assign algorithm
-//    */
-//   private async autoAssignTutor(
-//     course: CourseDocument,
-//     student: UserDocument,
-//     registrationId: any,
-//     preferredTimeSlots?: string[],
-//   ) {
-//     // 1. Find all tutors
-//     const allTutors = await this.userModel.find({ role: UserRole.TUTOR }).exec();
-
-//     if (!allTutors || allTutors.length === 0) {
-//       return {
-//         assigned: false,
-//         registration: await this.registrationModel.findById(registrationId).exec(),
-//         message: 'No tutors available',
-//       };
-//     }
-
-//     // Normalize preferred time slots (if any)
-//     const desiredSlots = (preferredTimeSlots || []).map(s => this.normalizeSlotString(s)).filter(Boolean) as TimeSlot[];
-
-//     // 2) Filter tutors -> subject + optional level
-//     const subjectFiltered = allTutors.filter((t: any) => {
-//       // Tutor's preferredSubjects may be either under tutor.preferredSubjects or tutor.subjects/expertise
-//       const tutorSubjects: string[] =
-//         (Array.isArray(t.preferredSubjects) && t.preferredSubjects) ||
-//         (Array.isArray((t as any).subjects) && (t as any).subjects) ||
-//         (t.expertise ? [t.expertise] : []);
-//       const teachesSubject = tutorSubjects.length ? tutorSubjects.map(String).includes(String(course.subject)) : true;
-
-//       if (!teachesSubject) return false;
-
-//         // If tutor has preferred student level set, enforce it (if student.level exists)
-//       if (t.preferredStudentLevel && (student as any).level) {
-//         if (t.preferredStudentLevel !== (student as any).level) return false;
-//       }
-
-//       return true;
-//     });
-
-//     if (subjectFiltered.length === 0) {
-//         return {
-//         assigned: false,
-//         registration: await this.registrationModel.findById(registrationId).exec(),
-//         message: 'No tutors with matching subject found',
-//         };
-//     }
-
-//     // 3) If desiredSlots provided, filter tutors by availability overlap
-//     const availabilityFiltered = desiredSlots.length ? subjectFiltered.filter((t: any) => {
-
-//         // if tutor has no constraints, treat them as available (or decide otherwise)
-//       if (!Array.isArray(t.constraints) || t.constraints.length === 0) {
-//         return true; // permissive: allow tutors with no explicit constraints
-//       }
-
-//       // convert tutor constraints to TimeSlot[]
-//       const tutorSlots: TimeSlot[] = (t.constraints || []).map((c: any) => {
-//         const start = this.parseHHMM(c.startTime);
-//         const end = this.parseHHMM(c.endTime);
-//         if (start === null || end === null) return null;
-//         return { day: String(c.day), start, end };
-//       }).filter(Boolean) as TimeSlot[];
-
-//       // Check if any desiredSlot overlaps with any tutorSlot
-//       // At least one preferred slot overlaps with tutor’s available time
-//       return desiredSlots.some(desired => this.checkSlotOverlap(desired, tutorSlots));
-//     })
-//     : subjectFiltered;
-
-//     // 4) Score candidates: prefer tutors with fewest assigned students and best subject match
-//     // Build a list of { tutor, load, score } maybe parallelize with Promise.all
-//     const scoredCandidates = await Promise.all(
-//       availabilityFiltered.map(async (t: any) => {
-//         const assignedCount = await this.registrationModel
-//           .countDocuments({ tutor: t._id, status: RegistrationStatus.ASSIGNED }).exec();
-
-//         // Score: lower load is better; add small bonus for exact subject match
-//         let score = assignedCount; // lower is better
-//         const tutorSubjects = (Array.isArray(t.preferredSubjects) ? t.preferredSubjects : []).map(String);
-//         if (tutorSubjects.includes(String(course.subject))) score -= 0.5; // prefer exact subject match
-
-//         return { tutor: t, assignedCount, score };
-//       }),
-//     );
-
-//     // Sort ascending by score (lowest score is best)
-//     scoredCandidates.sort((a, b) => a.score - b.score);
-
-//     // 5) Iterate candidates and assign first tutor that has capacity
-//     for (const cand of scoredCandidates) {
-//       const tutor = cand.tutor as any;
-//       const maxStudents = typeof tutor.maxStudents === 'number' ? tutor.maxStudents : 10; // default
-
-//       // count current load for this tutor in this course or overall (choose policy)
-//       const currentCount = await this.registrationModel
-//         .countDocuments({ tutor: tutor._id, status: RegistrationStatus.ASSIGNED }).exec();
-
-//       if (currentCount >= maxStudents) {
-//         continue; // tutor full
-//       }
-
-//     // Optionally, re-check time slot availability atomically here if necessary
-
-//     // Assign the registration to this tutor
-//     const reg = await this.registrationModel
-//         .findByIdAndUpdate(
-//           registrationId,
-//           { tutor: tutor._id, status: RegistrationStatus.ASSIGNED },
-//           { new: true },
-//         )
-//         .exec();
-
-//       return {
-//         assigned: true,
-//         registration: reg,
-//         message: `Successfully assigned to tutor ${tutor.name}`,
-//       };
-//     }
-
-//     // Nothing matched capacity or constraints
-//     return {
-//       assigned: false,
-//       registration: await this.registrationModel.findById(registrationId).exec(),
-//       message: 'No suitable tutor found. Your request is pending.',
-//     };
-//   }
-
-//   /**
-//    * For tutors: get registrations (students assigned to them)
-//    */
-//   async getAssignmentsForTutor(tutorId: string) {
-//     // simple validation
-//     const tutor = await this.userModel.findById(tutorId).exec();
-//     if (!tutor) throw new NotFoundException('Tutor not found');
-
-//     const regs = await this.registrationModel
-//       .find({ tutor: tutorId })
-//       .populate('student', 'name email') // adjust fields to what's in your User schema
-//       .populate('course', 'courseName subject') // adjust course fields
-//       .exec();
-
-//     return regs;
-//   }
-
-//   /**
-//    * Optionally: get registrations for a student
-//    */
-//   async getRegistrationsForStudent(studentId: string) {
-//     return this.registrationModel
-//       .find({ student: studentId })
-//       .populate('tutor', 'name email')
-//       .populate('course', 'courseName subject')
-//       .exec();
-//   }
-// }
