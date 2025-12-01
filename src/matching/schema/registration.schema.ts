@@ -26,7 +26,7 @@ export class Registration {
   tutor?: string;
 
   @Prop({ required: true, type: String })
-  course: String;
+  courseCode: String;
 
   @Prop({ type: Number, default: 0 })
   registeredCount: number;

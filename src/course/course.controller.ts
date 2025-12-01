@@ -1,12 +1,11 @@
 // CO3001_Project_BackEnd_main\src\course\course.controller.ts
 
 import { 
-  Body, Controller, Get, Param, Post, Delete, Patch, UseGuards, Req, ForbiddenException 
+  Body, Controller, Get, Param, Post, Delete, Patch, UseGuards, Req, ForbiddenException, Query
 } from '@nestjs/common';
 import { CourseService } from './course.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
-import { AssignTutorDto } from './dto/assign-tutor.dto';
 import { JwtAuthGuard } from '@/auth/jwt/jwt-auth.guard';
 import { UserRole } from '@/user/schema/user.schema';
 import { Request } from 'express';
@@ -37,7 +36,10 @@ export class CourseController {
   }
 
   @Get()
-  async getAllCourses() {
+  async getCourses(@Query('courseCode') courseCode: string) {
+    if (courseCode) {
+      return this.courseService.getCoursesByCode(courseCode);
+    }
     return this.courseService.getAllCourses();
   }
 
@@ -67,57 +69,4 @@ export class CourseController {
     }
     return this.courseService.deleteCourse(id);
   }
-
-  // @UseGuards(JwtAuthGuard)
-  // @Post(':id/assign-tutor')
-  // async assignTutor(
-  //   @Param('id') id: string,
-  //   @Body() assignTutorDto: AssignTutorDto,
-  //   @Req() req: AuthRequest,
-  // ) {
-  //   if (req.user.role !== UserRole.ADMIN)
-  //     throw new ForbiddenException('Only Admins can assign tutors');
-  //   return this.courseService.assignTutorToCourse(
-  //     id,
-  //     assignTutorDto.classGroup,
-  //     assignTutorDto.tutorId,
-  //     assignTutorDto.sessions,
-  //   );
-  // }
-
-  // @UseGuards(JwtAuthGuard)
-  // @Post(':id/unassign-tutor')
-  // async unassignTutor(
-  //   @Param('id') id: string,
-  //   @Body() assignTutorDto: AssignTutorDto,
-  //   @Req() req: AuthRequest,
-  // ) {
-  //   if (req.user.role !== UserRole.ADMIN)
-  //     throw new ForbiddenException('Only Admins can unassign tutors');
-  //   return this.courseService.unassignTutorFromCourse(id, assignTutorDto.classGroup);
-  // }
-
-  // @UseGuards(JwtAuthGuard)
-  // @Post(':id/register')
-  // async registerStudent(
-  //   @Param('id') id: string,
-  //   @Body('classGroup') classGroup: string,
-  //   @Req() req: AuthRequest,
-  // ) {
-  //   if (req.user.role !== UserRole.STUDENT)
-  //     throw new ForbiddenException('Only students can register');
-  //   return this.courseService.registerStudentForCourse(id, classGroup, req.user.userId);
-  // }
-
-  // @UseGuards(JwtAuthGuard)
-  // @Post(':id/unregister')
-  // async unregisterStudent(
-  //   @Param('id') id: string,
-  //   @Body('classGroup') classGroup: string,
-  //   @Req() req: AuthRequest,
-  // ) {
-  //   if (req.user.role !== UserRole.STUDENT)
-  //     throw new ForbiddenException('Only students can unregister');
-  //   return this.courseService.unregisterStudentForCourse(id, classGroup, req.user.userId);
-  // }
 }

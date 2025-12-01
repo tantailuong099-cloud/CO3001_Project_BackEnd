@@ -1,3 +1,5 @@
+// CO3001_Project_BackEnd_main\src\user\schema\admin.schema.ts
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { User } from './user.schema';
 import { HydratedDocument } from 'mongoose';

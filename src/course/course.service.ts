@@ -72,6 +72,11 @@ export class CourseService {
     return this.courseModel.find().lean();
   }
 
+  /** Get course by courseCode */
+  async getCoursesByCode(courseCode: string) {
+    return this.courseModel.find({ courseCode }).lean();
+  }
+
   /** Get course by ID */
   async getCourseById(id: string) {
     const course = await this.courseModel.findById(id);
@@ -137,81 +142,3 @@ export class CourseService {
     return { message: 'Course and class group registrations deleted' };
   }
 }
-
-//
-//   /** Assign tutor to specific class group with sessions */
-//   async assignTutorToCourse(courseId: string, classGroup: string, tutorId: string, sessions: any[]) {
-//     const course = await this.courseModel.findById(courseId).exec();
-//     if (!course) throw new NotFoundException('Course not found');
-
-//     if (!course.classGroups.includes(classGroup)) 
-//       throw new BadRequestException('Invalid class group');
-
-//     const tutor = await this.userModel.findById(tutorId).exec();
-//     if (!tutor || tutor.role !== UserRole.TUTOR)
-//       throw new BadRequestException('Invalid tutor');
-
-//     // Find or create Registration document
-//     let registration = await this.registrationModel.findOne({ course: courseId, classGroup });
-//     if (!registration) {
-//       registration = new this.registrationModel({
-//         course: courseId,
-//         classGroup,
-//         students: [],
-//         tutor: tutorId,
-//         status: RegistrationStatus.ASSIGNED,
-//       });
-//     } else {
-//       registration.tutor = tutorId;
-//     }
-
-//     registration.sessions = sessions;
-//     return registration.save();
-//   }
-
-//   /** Unassign tutor from class group */
-//   async unassignTutorFromCourse(courseId: string, classGroup: string) {
-//     const registration = await this.registrationModel.findOne({ course: courseId, classGroup });
-//     if (!registration) throw new NotFoundException('Registration not found for this class group');
-
-//     registration.tutor = null;
-//     registration.sessions = [];
-//     return registration.save();
-//   }
-
-//   /** Register student to a specific class group */
-//   async registerStudentForCourse(courseId: string, classGroup: string, studentId: string) {
-//     const course = await this.courseModel.findById(courseId).exec();
-//     if (!course) throw new NotFoundException('Course not found');
-//     if (!course.classGroups.includes(classGroup)) throw new BadRequestException('Invalid class group');
-
-//     const student = await this.userModel.findById(studentId).exec();
-//     if (!student || student.role !== UserRole.STUDENT) throw new BadRequestException('Invalid student');
-
-//     const registration = await this.registrationModel.findOne({ course: courseId, classGroup });
-//     if (!registration) throw new NotFoundException('Registration not found for this class group');
-
-//     if (registration.students.includes(studentId)) 
-//       throw new BadRequestException('Student already registered');
-
-//     // Check capacity
-//     if (registration.students.length >= course.capacity) throw new BadRequestException('Class is full');
-
-//     registration.students.push(studentId);
-//     await registration.save();
-
-//     // Increment course registeredCount
-//     await this.courseModel.updateOne({ _id: courseId }, { $inc: { registeredCount: 1 } });
-
-//     return registration;
-//   }
-
-//   /** Unregister student from class group */
-//   async unregisterStudentForCourse(courseId: string, classGroup: string, studentId: string) {
-//     const registration = await this.registrationModel.findOne({ course: courseId, classGroup });
-//     if (!registration) throw new NotFoundException('Registration not found for this class group');
-
-//     registration.students = registration.students.filter((s) => s !== studentId);
-//     return registration.save();
-//   }
-// }

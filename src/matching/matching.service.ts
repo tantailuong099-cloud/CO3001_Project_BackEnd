@@ -8,7 +8,7 @@ import { RegisterProgramDto } from './dto/register-program.dto';
 import { SetScheduleDto } from './dto/set-schedule.dto';
 import { User, UserRole, UserDocument } from '@/user/schema/user.schema';
 import { Course, CourseDocument } from '@/course/schema/course.schema';
-
+import { UpdateRegistrationDto } from './dto/update-registration.dto';
 
 type Session  = { day: string; startTime: string; endTime: string };
 type TimeSlot = { day: string; start:     number; end:     number };
@@ -287,7 +287,7 @@ export class MatchingService {
     for (const other of otherRegs) {
       if (other.sessions && this.sessionsOverlap(other.sessions as Session[], dto.sessions)) {
         throw new BadRequestException(
-          `Schedule conflicts with tutor's other class group (${other.course} / ${other.classGroup})`,
+          `Schedule conflicts with tutor's other class group (${other.courseCode} / ${other.classGroup})`,
         );
       }
     }
@@ -313,6 +313,16 @@ export class MatchingService {
   async getAllRegistrations() {
     return this.registrationModel.find().lean();
   }
+
+  async getRegistrationsFiltered(courseCode?: string, classGroup?: string) {
+    const filter: any = {};
+
+    if (courseCode) filter.courseCode = courseCode;
+    if (classGroup) filter.classGroup = classGroup;
+
+    return this.registrationModel.find(filter).lean();
+  }
+
 
   /**
    * Get student’s registered courses
@@ -406,5 +416,34 @@ export class MatchingService {
     await registration.save();
 
     return { message: 'Tutor unassigned', registration };
+  }
+
+
+  async updateRegistration(registrationId: string, dto: UpdateRegistrationDto) {
+    const registration = await this.registrationModel.findById(registrationId);
+    if (!registration) {
+      throw new NotFoundException('Registration not found');
+    }
+
+    // Only update allowed fields
+    if (dto.tutor !== undefined) {
+      registration.tutor = dto.tutor;
+    }
+
+    if (dto.status !== undefined) {
+      registration.status = dto.status as RegistrationStatus;
+    }
+
+    await registration.save();
+    return { message: 'Registration updated successfully', registration };
+  }
+  
+  async deleteRegistrationByCourseGroup(courseCode: string, classGroup: string) {
+    const reg = await this.registrationModel.findOne({ courseCode, classGroup });
+    if (!reg) throw new NotFoundException('Registration not found');
+
+    // Optionally: delete course info if needed
+    await reg.deleteOne();
+    return { message: 'Deleted successfully' };
   }
 }

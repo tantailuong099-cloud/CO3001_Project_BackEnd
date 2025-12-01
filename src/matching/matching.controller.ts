@@ -1,10 +1,13 @@
 // src/matching/matching.controller.ts
 
-import { Controller, Post, Body, UseGuards, Req, Get, Param, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { 
+  Controller, Post, Patch, Delete, Body, UseGuards, Req, Get, Param, Query, ForbiddenException
+ } from '@nestjs/common';
 import { MatchingService } from './matching.service';
 import { JwtAuthGuard } from '@/auth/jwt/jwt-auth.guard';
 import { RegisterProgramDto } from './dto/register-program.dto';
 import { SetScheduleDto } from './dto/set-schedule.dto';
+import { UpdateRegistrationDto } from './dto/update-registration.dto';
 import { Request } from 'express';
 import { UserRole } from '@/user/schema/user.schema';
 
@@ -116,11 +119,16 @@ export class MatchingController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('registrations')
-  async getAllRegistrations(@Req() req: AuthRequest) {
+  async getRegistrations(
+    @Req() req: AuthRequest,
+    @Query('courseCode') courseCode?: string,
+    @Query('classGroup') classGroup?: string
+  ) {
     if (![UserRole.ADMIN, UserRole.TUTOR].includes(req.user.role)) {
-      throw new ForbiddenException('Only Admins or Tutors can view all registrations');
+      throw new ForbiddenException('Only Admins or Tutors can view registrations');
     }
-    return this.matchingService.getAllRegistrations();
+
+    return this.matchingService.getRegistrationsFiltered(courseCode, classGroup);
   }
 
   /**
@@ -159,5 +167,38 @@ export class MatchingController {
       throw new ForbiddenException('Only Admins can view tutor courses');
     }
     return this.matchingService.getTutorCourses(tutorId);
+  }
+
+  /* ---------------------------------------------------------------------
+   * ADMIN: Update registration fields (tutor, status)
+   * --------------------------------------------------------------------- */
+  @UseGuards(JwtAuthGuard)
+  @Patch('registration/:id')
+  async updateRegistration(
+    @Req() req: AuthRequest,
+    @Param('id') registrationId: string,
+    @Body() dto: UpdateRegistrationDto
+  ) {
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only Admins can update registrations');
+    }
+    return this.matchingService.updateRegistration(registrationId, dto);
+  }
+
+  /**
+   * ADMIN deletes a registration (class group).
+   */
+  @UseGuards(JwtAuthGuard)
+  @Delete('registrations/:courseCode/:classGroup')
+  async deleteRegistration(
+    @Req() req: AuthRequest,
+    @Param('courseCode') courseCode: string,
+    @Param('classGroup') classGroup: string
+  ) {
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only Admins can delete registrations');
+    }
+
+    return this.matchingService.deleteRegistrationByCourseGroup(courseCode, classGroup);
   }
 }

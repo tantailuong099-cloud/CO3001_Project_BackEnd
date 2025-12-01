@@ -1,3 +1,5 @@
+// CO3001_Project_BackEnd_main\src\user\schema\tutor.schema.ts
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { User } from './user.schema';
 import { HydratedDocument } from 'mongoose';
@@ -19,17 +21,16 @@ const ConstraintSchema = SchemaFactory.createForClass(Constraint);
 
 @Schema({ timestamps: true })
 export class Tutor extends User {
+    // Courses this tutor can teach (courseCode)
   @Prop({ type: [String], default: [] })
-  preferredSubjects: string[];
+  assignedCourses: string[];
 
-  @Prop({ type: String })
-  preferredStudentLevel?: string; // e.g., "freshman", "sophomore"
+  // Registration IDs this tutor is assigned to
+  @Prop({ type: [String], default: [] })
+  assignedGroups: string[];
 
-  @Prop({ type: Number, default: 10 }) // Default 10 students
+  @Prop({ type: Number, default: 20 }) // Default 10 students
   maxStudents: number;
-
-  @Prop({ type: [String], default: [] })
-  courses: string[]; // list of course IDs or names
 
   @Prop({ type: [String], default: [] })
   sharedMaterial: string[];
