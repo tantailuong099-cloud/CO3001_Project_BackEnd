@@ -14,7 +14,7 @@ import { Request } from 'express';
 
 @Controller('feedback')
 export class FeedbackController {
-  constructor(private readonly feedbackService: FeedbackService) {}
+  constructor(private readonly feedbackService: FeedbackService) { }
   @UseGuards(JwtAuthGuard)
   @Post()
   create(@Body() createFeedbackDto: CreateFeedbackDto, @Req() req: Request) {

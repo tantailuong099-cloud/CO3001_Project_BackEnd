@@ -16,6 +16,9 @@ export class FeedbackService {
     createFeedbackDto: CreateFeedbackDto,
     authorId: string,
   ): Promise<FeedBackDocument> {
+    console.log('--- SERVICE: Received DTO:', createFeedbackDto);
+    console.log('--- SERVICE: Received authorId:', authorId);
+
     const { tutor: tutorId } = createFeedbackDto;
     await this.userService.updateUserInfo(tutorId, {});
     const newFeedback = new this.feedbackModel({
@@ -23,8 +26,18 @@ export class FeedbackService {
       ...createFeedbackDto,
       author: authorId,
     });
+    console.log('--- SERVICE: Document object BEFORE save:', newFeedback);
 
-    return newFeedback.save();
+    try {
+      const savedDocument = await newFeedback.save();
+      console.log('--- SERVICE: Document AFTER save:', savedDocument);
+
+      return savedDocument.toObject();
+    } catch (error) {
+      console.error('--- SERVICE: ERROR during .save() operation ---', error);
+      throw error;
+    }
+    // return newFeedback.save();
   }
 
   async getForTutor(tutorId: string): Promise<FeedBackDocument[]> {
