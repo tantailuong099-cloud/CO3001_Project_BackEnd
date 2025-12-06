@@ -80,21 +80,21 @@ export class CourseController {
     return this.courseService.assignTutorToCourse(id, assignTutorDto.courseId);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/unassign-tutor')
-  async unassignTutorFromCourse(
-    @Param('id') id: string,
-    @Body() assignTutorDto: AssignTutorDto, 
-    @Req() req: AuthRequest,
-  ) {
-    if (req.user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only admins can unassign tutors');
-    }
-    return this.courseService.unassignTutorFromCourse(
-      id,
-      assignTutorDto.courseId,
-    );
-  }
+  // @UseGuards(JwtAuthGuard)
+  // @Post(':id/unassign-tutor')
+  // async unassignTutorFromCourse(
+  //   @Param('id') id: string,
+  //   @Body() assignTutorDto: AssignTutorDto, 
+  //   @Req() req: AuthRequest,
+  // ) {
+  //   if (req.user.role !== UserRole.ADMIN) {
+  //     throw new ForbiddenException('Only admins can unassign tutors');
+  //   }
+  //   return this.courseService.unassignTutorFromCourse(
+  //     id,
+  //     assignTutorDto.courseId,
+  //   );
+  // }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/register')
@@ -106,14 +106,14 @@ export class CourseController {
     return this.courseService.registerStudentForCourse(id, studentId);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/unregister')
-  async unregisterStudent(@Param('id') id: string, @Req() req: AuthRequest) {
-    if (req.user.role !== UserRole.STUDENT) {
-      throw new ForbiddenException('Only students can unregister');
-    }
-    const studentId = req.user.userId;
-    return this.courseService.unregisterStudentForCourse(id, studentId);
-  }
+  // @UseGuards(JwtAuthGuard)
+  // @Post(':id/unregister')
+  // async unregisterStudent(@Param('id') id: string, @Req() req: AuthRequest) {
+  //   if (req.user.role !== UserRole.STUDENT) {
+  //     throw new ForbiddenException('Only students can unregister');
+  //   }
+  //   const studentId = req.user.userId;
+  //   return this.courseService.unregisterStudentForCourse(id, studentId);
+  // }
 
 }
