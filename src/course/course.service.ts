@@ -27,7 +27,7 @@ export class CourseService {
 
     @InjectModel(Registration.name)
     private readonly registrationModel: Model<RegistrationDocument>,
-  ) {}
+  ) { }
 
   /** Create course with auto classGroups and defaults */
   async createCourse(dto: CreateCourseDto) {
@@ -37,9 +37,9 @@ export class CourseService {
     const classGroups = dto.classGroups?.length
       ? dto.classGroups
       : Array.from(
-          { length: 5 },
-          (_, i) => `CC${(i + 1).toString().padStart(2, '0')}`,
-        );
+        { length: 5 },
+        (_, i) => `CC${(i + 1).toString().padStart(2, '0')}`,
+      );
 
     const course = new this.courseModel({
       ...dto,
@@ -83,11 +83,7 @@ export class CourseService {
 
   /** Get all courses */
   async getAllCourses() {
-    return this.courseModel
-      .find()
-      .populate('tutors')
-      .populate('students')
-      .exec();
+    return this.courseModel.find().exec();
   }
 
   /** Get course by courseCode */

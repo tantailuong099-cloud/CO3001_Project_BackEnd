@@ -6,7 +6,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   @Post('create')
   async createUser(@Body() createUserDto: CreateUserDto) {
@@ -22,6 +22,17 @@ export class UserController {
     if (!emails) throw new BadRequestException('Emails query param required');
     const emailArray = emails.split(',').map(e => e.trim());
     return this.userService.getStudentsByEmails(emailArray);
+  }
+
+  /**
+   * Get a specific user by ID
+   * Example: GET /user/by-id/6929e4ec95206eeaff0e6245
+   */
+  @Get('by-id/:id')
+  async getUserById(@Param('id') id: string) {
+    const user = await this.userService.findById(id);
+    if (!user) throw new BadRequestException('User not found');
+    return user;
   }
 
   @Get(':role')
