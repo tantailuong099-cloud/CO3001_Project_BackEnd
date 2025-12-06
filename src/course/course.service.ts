@@ -1,6 +1,15 @@
 // src\course\course.service.ts
 
+<<<<<<< HEAD
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+=======
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+>>>>>>> e7e7da4 (commit)
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Course, CourseDocument } from './schema/course.schema';
@@ -11,8 +20,13 @@ import { Registration, RegistrationDocument, RegistrationStatus } from '@/matchi
 @Injectable()
 export class CourseService {
   constructor(
+<<<<<<< HEAD
     @InjectModel(Course.name) 
     private readonly courseModel: Model<CourseDocument>,
+=======
+    @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
+    private userService: UserService,
+>>>>>>> e7e7da4 (commit)
 
     @InjectModel(Registration.name) 
     private readonly registrationModel: Model<RegistrationDocument>,
@@ -69,7 +83,15 @@ export class CourseService {
 
   /** Get all courses */
   async getAllCourses() {
+<<<<<<< HEAD
     return this.courseModel.find().lean();
+=======
+    return this.courseModel
+      .find()
+      .populate('tutors')
+      .populate('students')
+      .exec();
+>>>>>>> e7e7da4 (commit)
   }
 
   /** Get course by courseCode */
@@ -139,6 +161,58 @@ export class CourseService {
 
     await this.registrationModel.deleteMany({ course: id });
 
-    return { message: 'Course and class group registrations deleted' };
+    // if (tutor.role !== UserRole.TUTOR) {
+    //   throw new InternalServerErrorException('User is not a tutor');
+    // }
+
+    // course.tutors.push(tutor);
+    // return await course.save();
+
+    const course = await this.courseModel.findById(courseId).exec();
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    const tutor = await this.userModel.findById(tutorId);
+    if (!tutor) {
+      throw new NotFoundException('Tutor not found');
+    }
+    if (tutor.role !== UserRole.TUTOR) {
+      throw new BadRequestException('User is not a tutor');
+    }
+
+    course.tutors.push(tutor._id.toString());
+    return await course.save();
+  }
+
+  //Register
+  async registerStudentForCourse(courseId: string, studentId: string) {
+    //   const course = await this.getCourseById(courseId);
+    //   const student = await this.userService.updateUserInfo(studentId, {
+    //     $addToSet: { class: courseId },
+    //   });
+
+    //   if (student.role !== UserRole.STUDENT) {
+    //     throw new InternalServerErrorException('User is not a student');
+    //   }
+
+    //   course.students.push(student);
+    //   return await course.save();
+
+    const course = await this.courseModel.findById(courseId).exec();
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    const student = await this.userModel.findById(studentId);
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+    if (student.role !== UserRole.STUDENT) {
+      throw new BadRequestException('User is not a student');
+    }
+
+    course.students.push(student._id.toString());
+    return await course.save();
   }
 }
