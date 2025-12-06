@@ -1,3 +1,5 @@
+// CO3001_Project_BackEnd_main\src\course\course.controller.ts
+
 import {
   Body,
   Controller,
@@ -9,14 +11,15 @@ import {
   UseGuards,
   Req,
   ForbiddenException,
+  Query,
 } from '@nestjs/common';
 import { CourseService } from './course.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
-import { AssignTutorDto } from './dto/assign-tutor.dto';
 import { JwtAuthGuard } from '@/auth/jwt/jwt-auth.guard';
 import { UserRole } from '@/user/schema/user.schema';
 import { Request } from 'express';
+import { AssignTutorDto } from './dto/assign-tutor.dto';
 
 interface AuthRequest extends Request {
   user: {
@@ -25,18 +28,29 @@ interface AuthRequest extends Request {
     role: UserRole;
   };
 }
+
 @Controller('course')
 export class CourseController {
   constructor(private readonly courseService: CourseService) {}
 
-  @UseGuards(JwtAuthGuard) 
+  // ------------------------------
+  // COURSE CRUD
+  // ------------------------------
+
+  @UseGuards(JwtAuthGuard)
   @Post('create')
-  async createCourse(@Body() createCourseDto: CreateCourseDto, @Req() req: AuthRequest) {
-    return this.courseService.createCourse(createCourseDto);
+  async createCourse(@Body() dto: CreateCourseDto, @Req() req: AuthRequest) {
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only Admins can create courses');
+    }
+    return this.courseService.createCourse(dto);
   }
 
   @Get()
-  async getAllCourses() {
+  async getCourses(@Query('courseCode') courseCode: string) {
+    if (courseCode) {
+      return this.courseService.getCoursesByCode(courseCode);
+    }
     return this.courseService.getAllCourses();
   }
 
@@ -45,46 +59,53 @@ export class CourseController {
     return this.courseService.getCourseById(id);
   }
 
-  @UseGuards(JwtAuthGuard) 
+  @UseGuards(JwtAuthGuard)
   @Patch('update/:id')
   async updateCourse(
     @Param('id') id: string,
-    @Body() updateCourseDto: UpdateCourseDto,
+    @Body() dto: UpdateCourseDto,
     @Req() req: AuthRequest,
   ) {
-    if (req.user.role !== 'Admin') {
+    if (req.user.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admins can update courses');
     }
-    return this.courseService.updateCourse(id, updateCourseDto);
+    return this.courseService.updateCourse(id, dto);
   }
 
-  @UseGuards(JwtAuthGuard) 
+  @UseGuards(JwtAuthGuard)
   @Delete('delete/:id')
   async deleteCourse(@Param('id') id: string, @Req() req: AuthRequest) {
-    if (req.user.role !== 'Admin') {
+    if (req.user.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admins can delete courses');
     }
     return this.courseService.deleteCourse(id);
   }
 
-  @UseGuards(JwtAuthGuard) 
-  @Post(':id/assign-tutor')
-  async assignTutorToCourse(
-    @Param('id') id: string,
-    @Body() assignTutorDto: AssignTutorDto,
-    @Req() req: AuthRequest,
-  ) {
-    if (req.user.role !== 'Admin') {
-      throw new ForbiddenException('Only Admins can assign tutors');
-    }
-    return this.courseService.assignTutorToCourse(id, assignTutorDto.courseId);
-  }
+  // @UseGuards(JwtAuthGuard)
+  // @Post(':id/assign-tutor')
+  // async assignTutorToCourse(
+  //   @Param('id') id: string,
+  //   @Body() assignTutorDto: AssignTutorDto,
+  //   @Req() req: AuthRequest,
+  // ) {
+  //   if (req.user.role !== 'Admin') {
+  //     throw new ForbiddenException('Only Admins can assign tutors');
+  //   }
+  //   return await this.courseService.assignTutorToCourse(
+  //     id,
+  //     assignTutorDto.courseId,
+  //   );
+  // }
 
   // @UseGuards(JwtAuthGuard)
   // @Post(':id/unassign-tutor')
   // async unassignTutorFromCourse(
   //   @Param('id') id: string,
+<<<<<<< HEAD
   //   @Body() assignTutorDto: AssignTutorDto, 
+=======
+  //   @Body() assignTutorDto: AssignTutorDto,
+>>>>>>> 448bbdf67820eb0335584d5ac35431085e8c3b8f
   //   @Req() req: AuthRequest,
   // ) {
   //   if (req.user.role !== UserRole.ADMIN) {
@@ -115,5 +136,9 @@ export class CourseController {
   //   const studentId = req.user.userId;
   //   return this.courseService.unregisterStudentForCourse(id, studentId);
   // }
+<<<<<<< HEAD
 
 }
+=======
+}
+>>>>>>> 448bbdf67820eb0335584d5ac35431085e8c3b8f

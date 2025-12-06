@@ -1,48 +1,134 @@
-// src\matching\matching.controller.ts
+// src/matching/matching.controller.ts
 
-import { Controller, Post, Body, UseGuards, Req, Get, Param, BadRequestException } from '@nestjs/common';
+import { 
+  Controller, Post, Patch, Delete, Body, UseGuards, Req, Get, Param, Query, ForbiddenException
+ } from '@nestjs/common';
 import { MatchingService } from './matching.service';
 import { JwtAuthGuard } from '@/auth/jwt/jwt-auth.guard';
 import { RegisterProgramDto } from './dto/register-program.dto';
 import { SetScheduleDto } from './dto/set-schedule.dto';
+import { UpdateRegistrationDto } from './dto/update-registration.dto';
 import { Request } from 'express';
+import { UserRole } from '@/user/schema/user.schema';
+
+interface AuthRequest extends Request {
+  user: {
+    userId: string;
+    email: string;
+    role: UserRole;
+  };
+}
 
 @Controller('matching')
 export class MatchingController {
   constructor(private readonly matchingService: MatchingService) {}
 
+  // ------------------------------
+  // STUDENT: Register / Unregister
+  // ------------------------------
+  
   /**
    * STUDENT registers for a course/class group.
-   * Requires authentication.
    */
   @UseGuards(JwtAuthGuard)
   @Post('register')
-  async register(@Req() req: Request, @Body() dto: RegisterProgramDto) {
-    const studentId = (req.user as any).userId;
-    if (!studentId) throw new BadRequestException('Invalid or missing student ID');
+  async register(@Req() req: AuthRequest, @Body() dto: RegisterProgramDto) {
+    if (req.user.role !== UserRole.STUDENT) {
+      throw new ForbiddenException('Only students can register');
+    }
+    const studentId = req.user.userId;
     return this.matchingService.registerStudent(studentId, dto);
   }
 
   /**
+   * STUDENT unregisters from a course/class group.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('unregister')
+  async unregister(@Req() req: AuthRequest, @Body() dto: RegisterProgramDto) {
+    if (req.user.role !== UserRole.STUDENT) {
+      throw new ForbiddenException('Only students can unregister');
+    }
+    const studentId = req.user.userId;
+    return this.matchingService.unregisterStudent(studentId, dto.course, dto.classGroup);
+  }
+
+  
+  // ------------------------------
+  // TUTOR: Set schedule for assigned class group
+  // ------------------------------
+
+  /**
    * TUTOR sets schedule for their assigned course/class group.
-   * Requires authentication.
    */
   @UseGuards(JwtAuthGuard)
   @Post('schedule')
-  async setSchedule(@Req() req: Request, @Body() dto: SetScheduleDto) {
-    const tutorId = (req.user as any).userId;
-    if (!tutorId) throw new BadRequestException('Invalid or missing tutor ID');
+  async setSchedule(@Req() req: AuthRequest, @Body() dto: SetScheduleDto) {
+    if (req.user.role !== UserRole.TUTOR) {
+      throw new ForbiddenException('Only tutors can set schedule');
+    }
+    const tutorId = req.user.userId;
     return this.matchingService.setSchedule(tutorId, dto);
   }
 
+  
+  // ------------------------------
+  // ADMIN: Assign / Unassign tutors to class groups
+  // ------------------------------
+  
+  /**
+   * ADMIN assigns tutor to a class group.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('assign-tutor')
+  async assignTutor(
+    @Req() req: AuthRequest,
+    @Body('tutorId') tutorId: string,
+    @Body('courseId') courseId: string,
+    @Body('classGroup') classGroup: string
+  ) {
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only Admins can assign tutors');
+    }
+    return this.matchingService.assignTutor(tutorId, courseId, classGroup);
+  }
+
+  /**
+   * ADMIN unassigns tutor from a class group.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('unassign-tutor')
+  async unassignTutor(
+    @Req() req: AuthRequest,
+    @Body('courseId') courseId: string,
+    @Body('classGroup') classGroup: string
+  ) {
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only Admins can unassign tutors');
+    }
+    return this.matchingService.unassignTutor(courseId, classGroup);
+  }
+
+  
+  // ------------------------------
+  // READ Operations
+  // ------------------------------
+
   /**
    * ADMIN or TUTOR retrieves all class registrations.
-   * (You can later restrict this route by role if needed.)
    */
   @UseGuards(JwtAuthGuard)
   @Get('registrations')
-  async getAllRegistrations() {
-    return this.matchingService.getAllRegistrations();
+  async getRegistrations(
+    @Req() req: AuthRequest,
+    @Query('courseCode') courseCode?: string,
+    @Query('classGroup') classGroup?: string
+  ) {
+    if (![UserRole.ADMIN, UserRole.TUTOR].includes(req.user.role)) {
+      throw new ForbiddenException('Only Admins or Tutors can view registrations');
+    }
+
+    return this.matchingService.getRegistrationsFiltered(courseCode, classGroup);
   }
 
   /**
@@ -50,9 +136,11 @@ export class MatchingController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('student/me')
-  async getMyRegistrations(@Req() req: Request) {
-    const studentId = (req.user as any).userId;
-    if (!studentId) throw new BadRequestException('Invalid or missing user token');
+  async getMyRegistrations(@Req() req: AuthRequest) {
+    if (req.user.role !== UserRole.STUDENT) {
+      throw new ForbiddenException('Only students can view their registrations');
+    }
+    const studentId = req.user.userId;
     return this.matchingService.getStudentRegistrations(studentId);
   }
 
@@ -61,18 +149,56 @@ export class MatchingController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('tutor/me/courses')
-  async getMyCourses(@Req() req: Request) {
-    const tutorId = (req.user as any).userId;
-    if (!tutorId) throw new BadRequestException('Invalid or missing tutor ID');
+  async getMyCourses(@Req() req: AuthRequest) {
+    if (req.user.role !== UserRole.TUTOR) {
+      throw new ForbiddenException('Only tutors can view their assigned courses');
+    }
+    const tutorId = req.user.userId;
     return this.matchingService.getTutorCourses(tutorId);
   }
 
   /**
-   * ADMIN retrieves all courses assigned to a specific tutor (optional helper route).
+   * ADMIN retrieves all courses assigned to a specific tutor.
    */
+  @UseGuards(JwtAuthGuard)
   @Get('tutor/:tutorId/courses')
-  async getTutorCourses(@Param('tutorId') tutorId: string) {
-    if (!tutorId) throw new BadRequestException('Tutor ID is required');
+  async getTutorCourses(@Req() req: AuthRequest, @Param('tutorId') tutorId: string) {
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only Admins can view tutor courses');
+    }
     return this.matchingService.getTutorCourses(tutorId);
+  }
+
+  /* ---------------------------------------------------------------------
+   * ADMIN: Update registration fields (tutor, status)
+   * --------------------------------------------------------------------- */
+  @UseGuards(JwtAuthGuard)
+  @Patch('registration/:id')
+  async updateRegistration(
+    @Req() req: AuthRequest,
+    @Param('id') registrationId: string,
+    @Body() dto: UpdateRegistrationDto
+  ) {
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only Admins can update registrations');
+    }
+    return this.matchingService.updateRegistration(registrationId, dto);
+  }
+
+  /**
+   * ADMIN deletes a registration (class group).
+   */
+  @UseGuards(JwtAuthGuard)
+  @Delete('registrations/:courseCode/:classGroup')
+  async deleteRegistration(
+    @Req() req: AuthRequest,
+    @Param('courseCode') courseCode: string,
+    @Param('classGroup') classGroup: string
+  ) {
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Only Admins can delete registrations');
+    }
+
+    return this.matchingService.deleteRegistrationByCourseGroup(courseCode, classGroup);
   }
 }
