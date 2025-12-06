@@ -1,15 +1,10 @@
 // src\course\schema\course.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-<<<<<<< HEAD
 // import * as mongoose from 'mongoose'; 
 // import { User } from '@/user/schema/user.schema'; 
-import * as mongoose from 'mongoose'; 
-import { User } from '@/user/schema/user.schema'; 
-=======
-// import * as mongoose from 'mongoose';
-// import { User } from '@/user/schema/user.schema';
->>>>>>> 448bbdf67820eb0335584d5ac35431085e8c3b8f
+import * as mongoose from 'mongoose';
+import { User } from '@/user/schema/user.schema';
 
 @Schema({ timestamps: true })
 export class Course {

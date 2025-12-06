@@ -31,7 +31,7 @@ interface AuthRequest extends Request {
 
 @Controller('course')
 export class CourseController {
-  constructor(private readonly courseService: CourseService) {}
+  constructor(private readonly courseService: CourseService) { }
 
   // ------------------------------
   // COURSE CRUD
@@ -101,11 +101,7 @@ export class CourseController {
   // @Post(':id/unassign-tutor')
   // async unassignTutorFromCourse(
   //   @Param('id') id: string,
-<<<<<<< HEAD
-  //   @Body() assignTutorDto: AssignTutorDto, 
-=======
   //   @Body() assignTutorDto: AssignTutorDto,
->>>>>>> 448bbdf67820eb0335584d5ac35431085e8c3b8f
   //   @Req() req: AuthRequest,
   // ) {
   //   if (req.user.role !== UserRole.ADMIN) {
@@ -136,9 +132,4 @@ export class CourseController {
   //   const studentId = req.user.userId;
   //   return this.courseService.unregisterStudentForCourse(id, studentId);
   // }
-<<<<<<< HEAD
-
 }
-=======
-}
->>>>>>> 448bbdf67820eb0335584d5ac35431085e8c3b8f
