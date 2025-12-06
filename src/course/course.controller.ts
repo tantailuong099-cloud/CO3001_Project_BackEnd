@@ -31,7 +31,7 @@ interface AuthRequest extends Request {
 
 @Controller('course')
 export class CourseController {
-  constructor(private readonly courseService: CourseService) { }
+  constructor(private readonly courseService: CourseService) {}
 
   // ------------------------------
   // COURSE CRUD
@@ -132,4 +132,11 @@ export class CourseController {
   //   const studentId = req.user.userId;
   //   return this.courseService.unregisterStudentForCourse(id, studentId);
   // }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me/my-courses') // Đường dẫn API: GET /api/course/me/my-courses
+  async getMyCourses(@Req() req: AuthRequest) {
+    const { userId, role } = req.user;
+    return this.courseService.getCoursesForUser(userId, role);
+  }
 }
