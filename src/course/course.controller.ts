@@ -19,6 +19,7 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 import { JwtAuthGuard } from '@/auth/jwt/jwt-auth.guard';
 import { UserRole } from '@/user/schema/user.schema';
 import { Request } from 'express';
+import { AssignTutorDto } from './dto/assign-tutor.dto';
 
 interface AuthRequest extends Request {
   user: {
@@ -80,18 +81,21 @@ export class CourseController {
     return this.courseService.deleteCourse(id);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/assign-tutor')
-  async assignTutorToCourse(
-    @Param('id') id: string,
-    @Body() assignTutorDto: AssignTutorDto,
-    @Req() req: AuthRequest,
-  ) {
-    if (req.user.role !== 'Admin') {
-      throw new ForbiddenException('Only Admins can assign tutors');
-    }
-    return this.courseService.assignTutorToCourse(id, assignTutorDto.courseId);
-  }
+  // @UseGuards(JwtAuthGuard)
+  // @Post(':id/assign-tutor')
+  // async assignTutorToCourse(
+  //   @Param('id') id: string,
+  //   @Body() assignTutorDto: AssignTutorDto,
+  //   @Req() req: AuthRequest,
+  // ) {
+  //   if (req.user.role !== 'Admin') {
+  //     throw new ForbiddenException('Only Admins can assign tutors');
+  //   }
+  //   return await this.courseService.assignTutorToCourse(
+  //     id,
+  //     assignTutorDto.courseId,
+  //   );
+  // }
 
   // @UseGuards(JwtAuthGuard)
   // @Post(':id/unassign-tutor')

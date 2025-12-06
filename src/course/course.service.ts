@@ -1,34 +1,31 @@
 // src\course\course.service.ts
 
-<<<<<<< HEAD
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-=======
 import {
   Injectable,
-  InternalServerErrorException,
+  // InternalServerErrorException,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
->>>>>>> e7e7da4 (commit)
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { Course, CourseDocument } from './schema/course.schema';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
-import { Registration, RegistrationDocument, RegistrationStatus } from '@/matching/schema/registration.schema';
+import {
+  Registration,
+  RegistrationDocument,
+  RegistrationStatus,
+} from '@/matching/schema/registration.schema';
+import { UserRole } from '@/user/schema/user.schema';
+import { UserService } from '@/user/user.service';
 
 @Injectable()
 export class CourseService {
   constructor(
-<<<<<<< HEAD
-    @InjectModel(Course.name) 
-    private readonly courseModel: Model<CourseDocument>,
-=======
     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
     private userService: UserService,
->>>>>>> e7e7da4 (commit)
 
-    @InjectModel(Registration.name) 
+    @InjectModel(Registration.name)
     private readonly registrationModel: Model<RegistrationDocument>,
   ) {}
 
@@ -39,7 +36,10 @@ export class CourseService {
     // auto-generate class groups if not provided
     const classGroups = dto.classGroups?.length
       ? dto.classGroups
-      : Array.from({ length: 5 }, (_, i) => `CC${(i + 1).toString().padStart(2, '0')}`);
+      : Array.from(
+          { length: 5 },
+          (_, i) => `CC${(i + 1).toString().padStart(2, '0')}`,
+        );
 
     const course = new this.courseModel({
       ...dto,
@@ -83,15 +83,11 @@ export class CourseService {
 
   /** Get all courses */
   async getAllCourses() {
-<<<<<<< HEAD
-    return this.courseModel.find().lean();
-=======
     return this.courseModel
       .find()
       .populate('tutors')
       .populate('students')
       .exec();
->>>>>>> e7e7da4 (commit)
   }
 
   /** Get course by courseCode */
@@ -134,7 +130,7 @@ export class CourseService {
             sessions: [],
             registeredCount: 0,
             status: RegistrationStatus.CREATED,
-          }))
+          })),
         );
       }
 
@@ -148,7 +144,9 @@ export class CourseService {
     }
 
     // update the course
-    const updated = await this.courseModel.findByIdAndUpdate(id, dto, { new: true });
+    const updated = await this.courseModel.findByIdAndUpdate(id, dto, {
+      new: true,
+    });
     return updated;
   }
 
@@ -168,12 +166,12 @@ export class CourseService {
     // course.tutors.push(tutor);
     // return await course.save();
 
-    const course = await this.courseModel.findById(courseId).exec();
+    const course = await this.courseModel.findById(id).exec();
     if (!course) {
       throw new NotFoundException('Course not found');
     }
 
-    const tutor = await this.userModel.findById(tutorId);
+    const tutor = await this.userService.findById(course.tutors[0]);
     if (!tutor) {
       throw new NotFoundException('Tutor not found');
     }
@@ -204,7 +202,7 @@ export class CourseService {
       throw new NotFoundException('Course not found');
     }
 
-    const student = await this.userModel.findById(studentId);
+    const student = await this.userService.findById(studentId);
     if (!student) {
       throw new NotFoundException('Student not found');
     }
@@ -212,7 +210,7 @@ export class CourseService {
       throw new BadRequestException('User is not a student');
     }
 
-    course.students.push(student._id.toString());
+    //course.students.push(student._id.toString());
     return await course.save();
   }
 }
