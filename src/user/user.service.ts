@@ -80,4 +80,14 @@ export class UserService {
       throw new InternalServerErrorException(err);
     }
   }
+    
+  /**
+   * Get multiple students by email array
+   */
+  async getStudentsByEmails(emails: string[]): Promise<StudentDocument[]> {
+    const studentModel = this.userModel.discriminators?.['Student'] as Model<StudentDocument>;
+    if (!studentModel) throw new BadRequestException('Student model not found');
+
+    return studentModel.find({ email: { $in: emails } }).exec();
+  }
 }

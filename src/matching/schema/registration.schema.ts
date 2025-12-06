@@ -1,12 +1,13 @@
 // src\matching\schema\registration.schema.ts
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import mongoose, { HydratedDocument } from 'mongoose';
-import { User } from '@/user/schema/user.schema';
-import { Course } from '@/course/schema/course.schema';
+import { HydratedDocument } from 'mongoose';
 
 export enum RegistrationStatus {
-  ASSIGNED = 'assigned',
+  CREATED = 'created',            // initial
+  TUTOR_ASSIGNED = 'tutor_assigned',
+  ACTIVE = 'active',              // students registered or active period
+  CLOSED = 'closed',              // after registration period ends
 }
 
 /*
@@ -20,16 +21,27 @@ export class Registration {
   @Prop({ type: [String], default: [] })
   students: String[];
 
-  @Prop({ required: true, type: String })
-  tutor?: String;
+  // Assigned tutor (optional)
+  @Prop({ type: String, required: false })
+  tutor?: string;
 
   @Prop({ required: true, type: String })
-  course: String;
+  courseCode: String;
+
+  @Prop({ type: Number, default: 0 })
+  registeredCount: number;
 
   @Prop({ required: true, type: String })
   classGroup: string;
 
-  @Prop({ enum: RegistrationStatus, default: RegistrationStatus.ASSIGNED })
+    // Schedule for this class group
+  @Prop({ 
+    type: [{ day: String, startTime: String, endTime: String }],
+    default: [],
+  })
+  sessions: { day: string; startTime: string; endTime: string }[];
+
+  @Prop({ enum: RegistrationStatus, default: RegistrationStatus.CREATED })
   status: RegistrationStatus;
 }
 

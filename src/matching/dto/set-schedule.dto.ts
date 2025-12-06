@@ -31,6 +31,10 @@ export class SetScheduleDto {
   @IsNotEmpty()
   courseId: string;
 
+  @IsNotEmpty()
+  @IsString()
+  classGroup: string; // specify the class group for this schedule
+
   /**
    * The array of session times for this course.
    */
