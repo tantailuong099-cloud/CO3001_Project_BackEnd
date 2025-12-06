@@ -10,6 +10,7 @@ async function bootstrap() {
   app.use(cookieParser());
   app.enableCors({
     origin: 'http://localhost:3000',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', // Cho phép tất cả các method
     credentials: true,
   });
   app.useGlobalPipes(new ValidationPipe());
