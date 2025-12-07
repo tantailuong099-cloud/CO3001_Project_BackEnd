@@ -21,7 +21,7 @@ const ConstraintSchema = SchemaFactory.createForClass(Constraint);
 
 @Schema({ timestamps: true })
 export class Tutor extends User {
-    // Courses this tutor can teach (courseCode)
+  // Courses this tutor can teach (courseCode)
   @Prop({ type: [String], default: [] })
   assignedCourses: string[];
 
@@ -37,6 +37,12 @@ export class Tutor extends User {
 
   @Prop({ type: [ConstraintSchema], default: [] })
   constraints: Constraint[];
+
+  @Prop()
+  tutorId: string;
+
+  @Prop()
+  department: string;
 }
 
 export type TutorDocument = HydratedDocument<Tutor>;

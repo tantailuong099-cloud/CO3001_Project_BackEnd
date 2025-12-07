@@ -1,12 +1,26 @@
 // CO3001_Project_BackEnd_main\src\course\dto\assign-tutor.dto.ts
 
-import { IsNotEmpty, IsString, IsArray, ValidateNested, IsIn } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsArray,
+  ValidateNested,
+  IsIn,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class SessionDto {
   @IsString()
   @IsNotEmpty()
-  @IsIn(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])
+  @IsIn([
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ])
   day: string;
 
   @IsString()

@@ -9,6 +9,8 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   dotenv.config();
   const app = await NestFactory.create(AppModule);
+
+  // 1. Dòng này giúp đọc cookie đăng nhập (QUAN TRỌNG)
   app.use(cookieParser());
   app.enableCors({
     origin: 'http://localhost:3000',

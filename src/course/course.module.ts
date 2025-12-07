@@ -4,15 +4,18 @@ import { CourseService } from './course.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Course, CourseSchema } from './schema/course.schema';
 import { UserModule } from '@/user/user.module';
-import { Registration, RegistrationSchema } from '@/matching/schema/registration.schema';
+import {
+  Registration,
+  RegistrationSchema,
+} from '@/matching/schema/registration.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Course.name, schema: CourseSchema },
-      { name: Registration.name, schema: RegistrationSchema }   // <-- ADD THIS
+      { name: Registration.name, schema: RegistrationSchema }, // <-- ADD THIS
     ]),
-    
+
     UserModule,
   ],
   controllers: [CourseController],

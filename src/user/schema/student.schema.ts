@@ -28,8 +28,17 @@ export class Student extends User {
   registrations: string[];
 
   // List of subjects and their score breakdowns + final score
-  @Prop({ type: [{ Subject: String, scores: Object, finalScore: Number }], default: [] })
+  @Prop({
+    type: [{ Subject: String, scores: Object, finalScore: Number }],
+    default: [],
+  })
   subjects: SubjectScore[];
+
+  @Prop()
+  studentId: string;
+
+  @Prop()
+  major: string;
 }
 
 export type StudentDocument = HydratedDocument<Student>;

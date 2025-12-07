@@ -19,7 +19,6 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 import { JwtAuthGuard } from '@/auth/jwt/jwt-auth.guard';
 import { UserRole } from '@/user/schema/user.schema';
 import { Request } from 'express';
-import { AssignTutorDto } from './dto/assign-tutor.dto';
 
 interface AuthRequest extends Request {
   user: {
@@ -69,7 +68,7 @@ export class CourseController {
     if (req.user.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admins can update courses');
     }
-    return this.courseService.updateCourse(id, dto);
+    return await this.courseService.updateCourse(id, dto);
   }
 
   @UseGuards(JwtAuthGuard)
