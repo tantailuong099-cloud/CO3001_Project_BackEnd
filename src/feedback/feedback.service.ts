@@ -20,7 +20,12 @@ export class FeedbackService {
     console.log('--- SERVICE: Received authorId:', authorId);
 
     const { tutor: tutorId } = createFeedbackDto;
-    await this.userService.updateUserInfo(tutorId, {});
+    // await this.userService.updateUserInfo(tutorId, {});
+    const tutorExists = await this.userService.findById(tutorId);
+    if (!tutorExists) {
+      throw new NotFoundException(`Tutor with ID ${tutorId} not found`);
+    }
+
     const newFeedback = new this.feedbackModel({
       // các fields trong model định nghĩa trong schema của nó
       ...createFeedbackDto,
