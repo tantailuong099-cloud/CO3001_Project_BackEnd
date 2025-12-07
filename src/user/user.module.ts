@@ -24,6 +24,6 @@ import { Admin, AdminSchema } from './schema/admin.schema';
   ],
   controllers: [UserController],
   providers: [UserService],
-  exports: [UserService],
+  exports: [UserService, MongooseModule],
 })
 export class UserModule {}

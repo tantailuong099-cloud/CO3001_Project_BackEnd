@@ -1,3 +1,5 @@
+// CO3001_Project_BackEnd_main\src\user\schema\user.schema.ts
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
@@ -18,9 +20,10 @@ export class User {
   @Prop({ required: true })
   password: string;
 
+  role: UserRole;
   // @Prop({ required: true, enum: ['Admin', 'Student', 'Tutor'] })
   // role: string;
-  role?: 'Tutor' | 'Student' | 'Admin';
+  //role?: 'Tutor' | 'Student' | 'Admin';
 
   @Prop()
   avatar?: string;
