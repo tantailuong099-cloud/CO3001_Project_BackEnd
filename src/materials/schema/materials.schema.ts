@@ -28,6 +28,9 @@ export class Material {
     default: DocumentType.SHARED,
   })
   type: DocumentType;
+
+  @Prop({ default: null })
+  sharedType: string;
 }
 
 export type MaterialDocument = HydratedDocument<Material>;

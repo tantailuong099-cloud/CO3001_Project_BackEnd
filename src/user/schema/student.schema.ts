@@ -5,7 +5,7 @@ import { User } from './user.schema';
 import { HydratedDocument } from 'mongoose';
 
 // Each subject now has a breakdown of scores
-interface SubjectScore {
+export interface SubjectScore {
   Subject: string;
   scores: {
     midterm?: number;

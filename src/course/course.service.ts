@@ -3,10 +3,10 @@
 import {
   Injectable,
   NotFoundException,
-  // BadRequestException,
+  //BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model /*,Types*/ } from 'mongoose';
+import { Model /*, Types*/ } from 'mongoose';
 import { Course, CourseDocument } from './schema/course.schema';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -81,12 +81,7 @@ export class CourseService {
 
   /** Get all courses */
   async getAllCourses() {
-    // return this.courseModel
-    //   .find()
-    //   .populate('tutors')
-    //   .populate('students')
-    //   .exec();
-    return this.courseModel.find().exec();
+    return this.courseModel.find().lean();
   }
 
   /** Get course by courseCode */
@@ -160,196 +155,5 @@ export class CourseService {
     await this.registrationModel.deleteMany({ course: id });
 
     return { message: 'Course and class group registrations deleted' };
-  }
-
-  // async getCoursesForUser(userId: string, role: UserRole) {
-  //   if (role === UserRole.TUTOR) {
-  //     console.log(`--- SERVICE: Finding courses for TUTOR ${userId} ---`);
-  //     return this.courseModel.find({ tutors: userId }).exec();
-  //   }
-
-  //   if (role === UserRole.STUDENT) {
-  //     console.log(`--- SERVICE: Finding courses for STUDENT ${userId} ---`);
-  //     const registrations = await this.registrationModel
-  //       .find({ students: userId })
-  //       .select('courseCode')
-  //       .exec();
-
-  //     const courseIds = [
-  //       ...new Set(registrations.map((reg) => reg.courseCode as string)),
-  //     ];
-
-  //     console.log(
-  //       `--- SERVICE: Student is registered in course IDs:`,
-  //       courseIds,
-  //     );
-
-  //     if (courseIds.length === 0) {
-  //       return [];
-  //     }
-  //     return this.courseModel
-  //       .find({
-  //         _id: { $in: courseIds },
-  //       })
-  //       .exec();
-  //   }
-
-  //   return [];
-  // }
-
-  // async getCoursesForUser(userId: string, role: UserRole) {
-  //   if (role === UserRole.TUTOR) {
-  //     console.log(
-  //       `--- SERVICE: Finding courses for TUTOR ID ${userId} by NAME ---`,
-  //     );
-
-  //     const tutor = await this.userService.findById(userId);
-  //     if (!tutor) {
-  //       console.log(`--- SERVICE: Tutor with ID ${userId} not found.`);
-  //       return [];
-  //     }
-  //     const tutorName = tutor.name;
-  //     console.log(`--- SERVICE: Tutor name is "${tutorName}".`);
-
-  //     const allCourses = await this.courseModel.find().exec();
-
-  //     const filteredCourses = allCourses.filter((course) => {
-  //       // // --- LOG CUỐI CÙNG ĐỂ TÌM RA SỰ THẬT ---
-  //       // console.log(`--- FINAL DEBUG for course ${course.courseCode} ---`);
-  //       // console.log(`Value of course.tutors:`, course.tutors);
-  //       // console.log(`Type of course.tutors: ${typeof course.tutors}`);
-  //       // console.log(`Is it an array? ${Array.isArray(course.tutors)}`);
-
-  //       const tutorsField = course.tutors as any;
-
-  //       // Xử lý nếu nó là một MẢNG (kịch bản có khả năng nhất)
-  //       if (Array.isArray(tutorsField)) {
-  //         // Kiểm tra xem có phần tử nào trong mảng chứa tên tutor không
-  //         return tutorsField.some(
-  //           (item) => typeof item === 'string' && item.includes(tutorName),
-  //         );
-  //       }
-
-  //       // Xử lý nếu nó là một CHUỖI (như logic cũ)
-  //       if (typeof tutorsField === 'string' && tutorsField.startsWith('[')) {
-  //         try {
-  //           const tutorNamesArray: string[] = JSON.parse(
-  //             tutorsField.replace(/'/g, '"'),
-  //           );
-  //           return tutorNamesArray.some((name) => name.trim() === tutorName);
-  //         } catch (e) {
-  //           return false;
-  //         }
-  //       }
-
-  //       return false;
-  //     });
-
-  //     console.log(
-  //       `--- SERVICE: Found ${filteredCourses.length} courses for tutor "${tutorName}".`,
-  //     );
-  //     return filteredCourses;
-  //   }
-
-  //   if (role === UserRole.STUDENT) {
-  //     console.log(`--- SERVICE: Finding courses for STUDENT ${userId} ---`);
-  //     const registrations = await this.registrationModel
-  //       .find({ students: userId })
-  //       .select('courseCode')
-  //       .exec();
-  //     const courseCodes = [
-  //       ...new Set(registrations.map((reg) => reg.courseCode as string)),
-  //     ];
-  //     if (courseCodes.length === 0) return [];
-  //     return this.courseModel.find({ courseCode: { $in: courseCodes } }).exec();
-  //   }
-
-  //   return [];
-  // }
-
-  async getCoursesForUser(userId: string, role: UserRole) {
-    // BƯỚC 1: LẤY THÔNG TIN USER BẤT KỂ VAI TRÒ
-    const user = await this.userService.findById(userId);
-    if (!user) {
-      console.log(`--- SERVICE: User with ID ${userId} not found.`);
-      return [];
-    }
-    const userName = user.name;
-    const userEmail = user.email;
-    console.log(
-      `--- SERVICE: User name is "${userName}", Email is "${userEmail}", Role is "${role}".`,
-    );
-
-    // ======================================================
-    // LOGIC CHO TUTOR (SO SÁNH TÊN)
-    // ======================================================
-    if (role === UserRole.TUTOR) {
-      const allCourses = await this.courseModel.find().exec();
-      const filteredCourses = allCourses.filter((course) => {
-        const tutorsField = course.tutors as any;
-        if (Array.isArray(tutorsField)) {
-          return tutorsField.some(
-            (item) => typeof item === 'string' && item.includes(userName),
-          );
-        }
-        if (typeof tutorsField === 'string' && tutorsField.startsWith('[')) {
-          try {
-            const tutorNamesArray: string[] = JSON.parse(
-              tutorsField.replace(/'/g, '"'),
-            );
-            return tutorNamesArray.some((name) => name.trim() === userName);
-          } catch (e) {
-            return false;
-          }
-        }
-        return false;
-      });
-      console.log(
-        `--- SERVICE: Found ${filteredCourses.length} courses for tutor "${userName}".`,
-      );
-      return filteredCourses;
-    }
-
-    // ======================================================
-    // LOGIC MỚI CHO STUDENT (SO SÁNH TÊN)
-    // ======================================================
-    if (role === UserRole.STUDENT) {
-      const allRegistrations = await this.registrationModel.find().exec();
-
-      // Lọc bằng tay các registration có chứa EMAIL của student
-      const studentRegistrations = allRegistrations.filter((reg) => {
-        const studentsField = reg.students as any;
-        if (Array.isArray(studentsField)) {
-          // 👇 THAY ĐỔI CỐT LÕI NẰM Ở ĐÂY
-          // So sánh `userEmail` với các email trong mảng `studentsField`
-          return studentsField.some(
-            (emailInArray) =>
-              typeof emailInArray === 'string' &&
-              emailInArray.trim().toLowerCase() ===
-                userEmail.trim().toLowerCase(),
-          );
-        }
-        return false;
-      });
-
-      if (studentRegistrations.length === 0) {
-        console.log(
-          `--- SERVICE: No registrations found for student with email "${userEmail}".`,
-        );
-        return [];
-      }
-
-      const courseCodes = [
-        ...new Set(studentRegistrations.map((reg) => reg.courseCode as string)),
-      ];
-      console.log(
-        `--- SERVICE: Student with email "${userEmail}" is in course codes:`,
-        courseCodes,
-      );
-
-      return this.courseModel.find({ courseCode: { $in: courseCodes } }).exec();
-    }
-
-    return [];
   }
 }

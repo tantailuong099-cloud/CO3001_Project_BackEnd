@@ -4,11 +4,17 @@ import { Model } from 'mongoose';
 import { FeedBack, FeedBackDocument } from './schema/feedback.schema';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { UserService } from '@/user/user.service';
+import {
+  Registration,
+  RegistrationDocument,
+} from '@/matching/schema/registration.schema';
 
 @Injectable()
 export class FeedbackService {
   constructor(
     @InjectModel(FeedBack.name) private feedbackModel: Model<FeedBackDocument>,
+    @InjectModel(Registration.name)
+    private registrationModel: Model<RegistrationDocument>,
     private readonly userService: UserService,
   ) {}
 
@@ -16,14 +22,11 @@ export class FeedbackService {
     createFeedbackDto: CreateFeedbackDto,
     authorId: string,
   ): Promise<FeedBackDocument> {
-    console.log('--- SERVICE: Received DTO:', createFeedbackDto);
-    console.log('--- SERVICE: Received authorId:', authorId);
-
-    const { tutor: tutorId } = createFeedbackDto;
+    const { courseId } = createFeedbackDto;
     // await this.userService.updateUserInfo(tutorId, {});
-    const tutorExists = await this.userService.findById(tutorId);
-    if (!tutorExists) {
-      throw new NotFoundException(`Tutor with ID ${tutorId} not found`);
+    const courseExsit = await this.registrationModel.findById(courseId);
+    if (!courseExsit) {
+      throw new NotFoundException(`Tutor with ID ${courseId} not found`);
     }
 
     const newFeedback = new this.feedbackModel({
@@ -31,24 +34,11 @@ export class FeedbackService {
       ...createFeedbackDto,
       author: authorId,
     });
-    console.log('--- SERVICE: Document object BEFORE save:', newFeedback);
 
-    try {
-      const savedDocument = await newFeedback.save();
-      console.log('--- SERVICE: Document AFTER save:', savedDocument);
-
-      return savedDocument.toObject();
-    } catch (error) {
-      console.error('--- SERVICE: ERROR during .save() operation ---', error);
-      throw error;
-    }
-    // return newFeedback.save();
+    return await newFeedback.save();
   }
 
-  async getForTutor(tutorId: string): Promise<FeedBackDocument[]> {
-    return this.feedbackModel
-      .find({ tutor: tutorId })
-      .populate('author', 'name email')
-      .exec();
+  async getForTutor(courseId: string): Promise<FeedBackDocument[]> {
+    return this.feedbackModel.find({ courseId: courseId }).exec();
   }
 }

@@ -6,6 +6,21 @@ import { HydratedDocument } from 'mongoose';
 // import * as mongoose from 'mongoose';
 // import { User } from '@/user/schema/user.schema';
 
+export class Schedule {
+  date: Date;
+  session: string;
+  form: string;
+  location: string;
+  status: string;
+  studentAttemp: string[];
+}
+
+export class Materials {
+  general: string[];
+  reference: string[];
+  slide: string[];
+}
+
 @Schema({ timestamps: true })
 export class Course {
   @Prop({ required: true })
@@ -51,6 +66,12 @@ export class Course {
   // Keep tutors as potential tutors (not assigned to specific classGroup)
   @Prop({ type: [String], default: [] })
   tutors: string[];
+
+  @Prop()
+  schedule: Schedule[];
+
+  @Prop()
+  material: Materials;
 
   // --- Status ---
   @Prop({

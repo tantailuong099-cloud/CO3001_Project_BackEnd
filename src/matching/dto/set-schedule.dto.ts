@@ -1,6 +1,13 @@
 // src\matching\dto\set-constraints.dto.ts
 
-import { IsMongoId, IsArray, IsString, ValidateNested, IsNotEmpty } from 'class-validator';
+import {
+  IsMongoId,
+  IsArray,
+  IsString,
+  ValidateNested,
+  IsNotEmpty,
+  IsOptional,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
@@ -18,6 +25,22 @@ class SessionDto {
   @IsString()
   @IsNotEmpty()
   endTime: string; // e.g., "11:00"
+
+  @IsString()
+  @IsOptional()
+  form?: string;
+
+  @IsString()
+  @IsOptional()
+  location: string;
+
+  @IsString()
+  @IsOptional()
+  studentAttemp?: string[];
+
+  @IsString()
+  @IsOptional()
+  status?: string; // thêm vào
 }
 
 /**

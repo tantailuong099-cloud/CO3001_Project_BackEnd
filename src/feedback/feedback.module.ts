@@ -5,11 +5,16 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { FeedBack, FeedBackSchema } from './schema/feedback.schema';
 import { UserModule } from '@/user/user.module';
 import { AuthModule } from '@/auth/auth.module';
+import {
+  Registration,
+  RegistrationSchema,
+} from '@/matching/schema/registration.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: FeedBack.name, schema: FeedBackSchema },
+      { name: Registration.name, schema: RegistrationSchema },
     ]),
     UserModule,
     AuthModule,

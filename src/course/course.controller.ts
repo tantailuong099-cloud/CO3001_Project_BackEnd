@@ -68,7 +68,7 @@ export class CourseController {
     if (req.user.role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only Admins can update courses');
     }
-    return await this.courseService.updateCourse(id, dto);
+    return this.courseService.updateCourse(id, dto);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -78,64 +78,5 @@ export class CourseController {
       throw new ForbiddenException('Only Admins can delete courses');
     }
     return this.courseService.deleteCourse(id);
-  }
-
-  // @UseGuards(JwtAuthGuard)
-  // @Post(':id/assign-tutor')
-  // async assignTutorToCourse(
-  //   @Param('id') id: string,
-  //   @Body() assignTutorDto: AssignTutorDto,
-  //   @Req() req: AuthRequest,
-  // ) {
-  //   if (req.user.role !== 'Admin') {
-  //     throw new ForbiddenException('Only Admins can assign tutors');
-  //   }
-  //   return await this.courseService.assignTutorToCourse(
-  //     id,
-  //     assignTutorDto.courseId,
-  //   );
-  // }
-
-  // @UseGuards(JwtAuthGuard)
-  // @Post(':id/unassign-tutor')
-  // async unassignTutorFromCourse(
-  //   @Param('id') id: string,
-  //   @Body() assignTutorDto: AssignTutorDto,
-  //   @Req() req: AuthRequest,
-  // ) {
-  //   if (req.user.role !== UserRole.ADMIN) {
-  //     throw new ForbiddenException('Only admins can unassign tutors');
-  //   }
-  //   return this.courseService.unassignTutorFromCourse(
-  //     id,
-  //     assignTutorDto.courseId,
-  //   );
-  // }
-
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/register')
-  async registerStudent(@Param('id') id: string, @Req() req: AuthRequest) {
-    if (req.user.role !== UserRole.STUDENT) {
-      throw new ForbiddenException('Only students can register for courses');
-    }
-    const studentId = req.user.userId;
-    return this.courseService.registerStudentForCourse(id, studentId);
-  }
-
-  // @UseGuards(JwtAuthGuard)
-  // @Post(':id/unregister')
-  // async unregisterStudent(@Param('id') id: string, @Req() req: AuthRequest) {
-  //   if (req.user.role !== UserRole.STUDENT) {
-  //     throw new ForbiddenException('Only students can unregister');
-  //   }
-  //   const studentId = req.user.userId;
-  //   return this.courseService.unregisterStudentForCourse(id, studentId);
-  // }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('me/my-courses') // Đường dẫn API: GET /api/course/me/my-courses
-  async getMyCourses(@Req() req: AuthRequest) {
-    const { userId, role } = req.user;
-    return this.courseService.getCoursesForUser(userId, role);
   }
 }

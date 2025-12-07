@@ -18,5 +18,5 @@ export class CreateFeedbackDto {
 
   @IsNotEmpty()
   @IsMongoId()
-  tutor: string; // student gửi id của tutor
+  courseId: string; // student gửi id của tutor
 }

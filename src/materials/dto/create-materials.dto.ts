@@ -5,9 +5,13 @@ export class CreateMaterialDto {
 
   description?: string;
 
-  author: string;
+  author?: string;
 
   pdfUrl: string;
 
   type: DocumentType;
+
+  sharedType?: string;
+
+  courseId?: string;
 }

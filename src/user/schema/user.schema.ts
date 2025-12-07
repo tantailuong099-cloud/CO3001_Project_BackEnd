@@ -2,6 +2,7 @@
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { SubjectScore } from './student.schema';
 
 export enum UserRole {
   STUDENT = 'Student',
@@ -27,6 +28,8 @@ export class User {
 
   @Prop()
   avatar?: string;
+
+  subjects: SubjectScore[];
 }
 
 export type UserDocument = HydratedDocument<User>;
