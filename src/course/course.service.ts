@@ -2,12 +2,11 @@
 
 import {
   Injectable,
-  // InternalServerErrorException,
   NotFoundException,
-  BadRequestException,
+  // BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model /*,Types*/ } from 'mongoose';
 import { Course, CourseDocument } from './schema/course.schema';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -16,14 +15,12 @@ import {
   RegistrationDocument,
   RegistrationStatus,
 } from '@/matching/schema/registration.schema';
-import { UserRole } from '@/user/schema/user.schema';
-import { UserService } from '@/user/user.service';
 
 @Injectable()
 export class CourseService {
   constructor(
-    @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
-    private userService: UserService,
+    @InjectModel(Course.name)
+    private readonly courseModel: Model<CourseDocument>,
 
     @InjectModel(Registration.name)
     private readonly registrationModel: Model<RegistrationDocument>,
@@ -44,7 +41,7 @@ export class CourseService {
     const course = new this.courseModel({
       ...dto,
       classGroups,
-      semester: dto.semester || 'Fall 2025',
+      semester: dto.semester || '2025 Fall',
 
       registrationStart: dto.registrationStart
         ? new Date(dto.registrationStart)
@@ -68,6 +65,7 @@ export class CourseService {
     // Create empty registration docs for each class group
     const regDocs = classGroups.map((group) => ({
       course: saved._id,
+      courseCode: saved.courseCode,
       classGroup: group,
       students: [],
       tutor: null,
@@ -83,11 +81,7 @@ export class CourseService {
 
   /** Get all courses */
   async getAllCourses() {
-    return this.courseModel
-      .find()
-      .populate('tutors')
-      .populate('students')
-      .exec();
+    return this.courseModel.find().lean();
   }
 
   /** Get course by courseCode */
@@ -123,7 +117,8 @@ export class CourseService {
       if (addedGroups.length > 0) {
         await this.registrationModel.insertMany(
           addedGroups.map((g) => ({
-            course: id,
+            course: course._id,
+            courseCode: course.courseCode,
             classGroup: g,
             students: [],
             tutor: null,
@@ -137,7 +132,7 @@ export class CourseService {
       // remove registration docs for deleted groups
       if (removedGroups.length > 0) {
         await this.registrationModel.deleteMany({
-          course: id,
+          course: course._id,
           classGroup: { $in: removedGroups },
         });
       }
@@ -159,58 +154,6 @@ export class CourseService {
 
     await this.registrationModel.deleteMany({ course: id });
 
-    // if (tutor.role !== UserRole.TUTOR) {
-    //   throw new InternalServerErrorException('User is not a tutor');
-    // }
-
-    // course.tutors.push(tutor);
-    // return await course.save();
-
-    const course = await this.courseModel.findById(id).exec();
-    if (!course) {
-      throw new NotFoundException('Course not found');
-    }
-
-    const tutor = await this.userService.findById(course.tutors[0]);
-    if (!tutor) {
-      throw new NotFoundException('Tutor not found');
-    }
-    if (tutor.role !== UserRole.TUTOR) {
-      throw new BadRequestException('User is not a tutor');
-    }
-
-    course.tutors.push(tutor._id.toString());
-    return await course.save();
-  }
-
-  //Register
-  async registerStudentForCourse(courseId: string, studentId: string) {
-    //   const course = await this.getCourseById(courseId);
-    //   const student = await this.userService.updateUserInfo(studentId, {
-    //     $addToSet: { class: courseId },
-    //   });
-
-    //   if (student.role !== UserRole.STUDENT) {
-    //     throw new InternalServerErrorException('User is not a student');
-    //   }
-
-    //   course.students.push(student);
-    //   return await course.save();
-
-    const course = await this.courseModel.findById(courseId).exec();
-    if (!course) {
-      throw new NotFoundException('Course not found');
-    }
-
-    const student = await this.userService.findById(studentId);
-    if (!student) {
-      throw new NotFoundException('Student not found');
-    }
-    if (student.role !== UserRole.STUDENT) {
-      throw new BadRequestException('User is not a student');
-    }
-
-    //course.students.push(student._id.toString());
-    return await course.save();
+    return { message: 'Course and class group registrations deleted' };
   }
 }

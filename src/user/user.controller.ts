@@ -1,6 +1,14 @@
 // CO3001_Project_BackEnd_main\src\user\user.controller.ts
 
-import { Body, Controller, Post, Get, Param, Query, BadRequestException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Get,
+  Param,
+  Query,
+  BadRequestException,
+} from '@nestjs/common';
 import { UpdateUserType, UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 
@@ -20,11 +28,16 @@ export class UserController {
   @Get('students')
   async getStudentsByEmails(@Query('emails') emails: string) {
     if (!emails) throw new BadRequestException('Emails query param required');
-    const emailArray = emails.split(',').map(e => e.trim());
+    const emailArray = emails.split(',').map((e) => e.trim());
     return this.userService.getStudentsByEmails(emailArray);
   }
 
-  @Get(':role')
+  @Get(':id')
+  async findById(@Param('id') id: string) {
+    return this.userService.findById(id);
+  }
+
+  @Get('role/:role')
   async getUserListbyRole(@Param('role') role: 'Tutor' | 'Admin' | 'Student') {
     return this.userService.getUserListByRole(role);
   }

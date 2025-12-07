@@ -14,6 +14,9 @@ export class Material {
   @Prop({ required: true })
   overview: string;
 
+  @Prop()
+  description: string;
+
   @Prop({ required: true })
   author: string;
 

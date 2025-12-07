@@ -1,9 +1,18 @@
 // CO3001_Project_BackEnd_main\src\course\dto\create-course.dto.ts
 
-import { IsNotEmpty, IsOptional, IsString, IsNumber, IsArray, IsISO8601 } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsArray,
+  IsISO8601,
+  Min,
+  Max,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateCourseDto {
-
   @IsString()
   @IsNotEmpty()
   courseCode: string;
@@ -28,8 +37,10 @@ export class CreateCourseDto {
   @IsNotEmpty()
   semester: string;
 
+  @Type(() => Number)
   @IsNumber()
-  @IsNotEmpty()
+  @Min(10)
+  @Max(30)
   capacity: number;
 
   @IsISO8601()

@@ -3,6 +3,8 @@ export class CreateMaterialDto {
 
   overview: string;
 
+  description?: string;
+
   author: string;
 
   pdfUrl: string;
