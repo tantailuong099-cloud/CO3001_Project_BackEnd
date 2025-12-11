@@ -246,7 +246,7 @@ export class MatchingController {
    * ADMIN: Update registration fields (tutor, status)
    * --------------------------------------------------------------------- */
   @UseGuards(JwtAuthGuard)
-  @Patch('registration/:id')
+  @Patch('registrations/:id')
   async updateRegistration(
     @Req() req: AuthRequest,
     @Param('id') registrationId: string,
