@@ -84,6 +84,7 @@ export class MatchingController {
   @Get('registrations')
   async getRegistrations(
     @Req() req: AuthRequest,
+    @Query('courseId') courseId?: string,
     @Query('courseCode') courseCode?: string,
     @Query('classGroup') classGroup?: string,
   ) {
@@ -94,6 +95,7 @@ export class MatchingController {
     // }
 
     return this.matchingService.getRegistrationsFiltered(
+      courseId,
       courseCode,
       classGroup,
     );
@@ -145,15 +147,15 @@ export class MatchingController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get(':id/student-progress')
-  async getStudentProgress(@Param('id') id: string) {
-    return this.matchingService.studentProgress(id);
+  @Get(':id')
+  async getCourseDetail(@Param('id') id: string) {
+    return this.matchingService.getClassDetailFromId(id);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('registration/:id')
-  async getCourseDetail(@Param('id') id: string) {
-    return this.matchingService.getClassDetailFromId(id);
+  @Get(':id/student-progress')
+  async getStudentProgress(@Param('id') id: string) {
+    return this.matchingService.studentProgress(id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -162,6 +164,7 @@ export class MatchingController {
     if (req.user.role !== UserRole.STUDENT) {
       throw new ForbiddenException('Only students can register');
     }
+    console.log(dto);
     const studentId = req.user.userId;
     return this.matchingService.registerStudent(studentId, dto);
   }
