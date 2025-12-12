@@ -4,7 +4,7 @@ import { IsBoolean, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 export class UpdateAttendanceDto {
   @IsString()
   @IsNotEmpty()
-  courseId: string; // ID của Registration (Class Group)
+  registrationId: string; // ID của Registration (Class Group)
 
   @IsNumber()
   @IsNotEmpty()
@@ -12,7 +12,7 @@ export class UpdateAttendanceDto {
 
   @IsString()
   @IsNotEmpty()
-  studentEmail: string;
+  studentId: string;
 
   @IsBoolean()
   @IsNotEmpty()

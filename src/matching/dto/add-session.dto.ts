@@ -5,7 +5,7 @@ import { IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
 export class AddSessionDto {
   @IsString()
   @IsNotEmpty()
-  courseId: string; // Lưu ý: Đây là _id của Registration (Class Group), không phải Course gốc
+  registrationId: string; 
 
   @IsString()
   @IsNotEmpty()
@@ -28,5 +28,4 @@ export class AddSessionDto {
   @IsString()
   @IsOptional()
   location?: string;
-  
 }
