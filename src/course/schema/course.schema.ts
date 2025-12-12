@@ -1,10 +1,36 @@
 // src\course\schema\course.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-// import * as mongoose from 'mongoose';
-// import { User } from '@/user/schema/user.schema';
-// import * as mongoose from 'mongoose';
-// import { User } from '@/user/schema/user.schema';
+
+/* ---------------------------
+   HELPERS: normalize arrays
+----------------------------*/
+function normalizeArray(value: any): string[] {
+  if (!value) return [];
+
+  // Case: already array
+  if (Array.isArray(value)) {
+    return value.map(v => String(v).trim());
+  }
+
+  // Case: stringified array "['A','B']"
+  if (typeof value === 'string') {
+    try {
+      const arr = JSON.parse(
+        value
+          .replace(/'/g, '"')   // convert single → double quote
+      );
+      if (Array.isArray(arr)) return arr.map(v => String(v).trim());
+    } catch (e) {
+      // fallback: return single-item array
+      return [value.trim()];
+    }
+  }
+
+  // fallback: ensure array of string
+  return [String(value).trim()];
+}
+
 
 export class Schedule {
   date: Date;
@@ -42,7 +68,11 @@ export class Course {
   semester: string; // e.g. "2025 Spring"
 
   // NEW: list of class group identifiers for this course (e.g. ["A","B","C"])
-  @Prop({ type: [String], default: [] })
+  @Prop({
+    type: [String],
+    default: [],
+    set: (val: any) => normalizeArray(val),       // FIXED: Works with both string & array from DB
+  })
   classGroups: string[];
 
   @Prop({ required: true, default: 30 })
@@ -64,7 +94,11 @@ export class Course {
 
   // --- Relationships ---
   // Keep tutors as potential tutors (not assigned to specific classGroup)
-  @Prop({ type: [String], default: [] })
+  @Prop({
+    type: [String],
+    default: [],
+    set: (val: any) => normalizeArray(val),         // FIXED: also normalize tutors field
+  })
   tutors: string[];
 
   @Prop()

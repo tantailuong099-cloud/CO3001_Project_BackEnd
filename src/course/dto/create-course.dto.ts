@@ -7,6 +7,7 @@ import {
   IsNumber,
   IsArray,
   IsISO8601,
+  IsMongoId,
   Min,
   Max,
 } from 'class-validator';
@@ -61,7 +62,7 @@ export class CreateCourseDto {
   classGroups: string[]; // auto-create CC01 - CC20 if not provided
 
   @IsArray()
-  @IsString({ each: true })
+  @IsMongoId({ each: true })
   @IsOptional()
   // optional initial pool of tutor ids
   tutors: string[];
