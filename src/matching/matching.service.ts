@@ -564,8 +564,8 @@ export class MatchingService {
       if (!user.email) return [];
       filter.students = user.email;
     } else if (user.role === UserRole.TUTOR) {
-      if (!user.name) return [];
-      filter.tutor = user.name;
+      if (!user._id.toString()) return [];
+      filter.tutor = user._id.toString();
     } else {
       return [];
     }
