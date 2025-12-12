@@ -16,7 +16,6 @@ import {
 import { MatchingService } from './matching.service';
 import { JwtAuthGuard } from '@/auth/jwt/jwt-auth.guard';
 import { RegisterProgramDto } from './dto/register-program.dto';
-import { SetScheduleDto } from './dto/set-schedule.dto';
 import { UpdateRegistrationDto } from './dto/update-registration.dto';
 import { Request } from 'express';
 import { UserRole } from '@/user/schema/user.schema';
@@ -85,16 +84,18 @@ export class MatchingController {
   @Get('registrations')
   async getRegistrations(
     @Req() req: AuthRequest,
+    @Query('courseId') courseId?: string,
     @Query('courseCode') courseCode?: string,
     @Query('classGroup') classGroup?: string,
   ) {
-    if (![UserRole.ADMIN, UserRole.TUTOR].includes(req.user.role)) {
-      throw new ForbiddenException(
-        'Only Admins or Tutors can view registrations',
-      );
-    }
+    // if (![UserRole.ADMIN, UserRole.TUTOR].includes(req.user.role)) {
+    //   throw new ForbiddenException(
+    //     'Only Admins or Tutors can view registrations',
+    //   );
+    // }
 
     return this.matchingService.getRegistrationsFiltered(
+      courseId,
       courseCode,
       classGroup,
     );
@@ -146,15 +147,15 @@ export class MatchingController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get(':id/student-progress')
-  async getStudentProgress(@Param('id') id: string) {
-    return this.matchingService.studentProgress(id);
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Get(':id')
   async getCourseDetail(@Param('id') id: string) {
     return this.matchingService.getClassDetailFromId(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/student-progress')
+  async getStudentProgress(@Param('id') id: string) {
+    return this.matchingService.studentProgress(id);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -163,6 +164,7 @@ export class MatchingController {
     if (req.user.role !== UserRole.STUDENT) {
       throw new ForbiddenException('Only students can register');
     }
+    console.log(dto);
     const studentId = req.user.userId;
     return this.matchingService.registerStudent(studentId, dto);
   }
@@ -177,65 +179,7 @@ export class MatchingController {
       throw new ForbiddenException('Only students can unregister');
     }
     const studentId = req.user.userId;
-    return this.matchingService.unregisterStudent(
-      studentId,
-      dto.course,
-      dto.classGroup,
-    );
-  }
-
-  // ------------------------------
-  // TUTOR: Set schedule for assigned class group
-  // ------------------------------
-
-  /**
-   * TUTOR sets schedule for their assigned course/class group.
-   */
-  @UseGuards(JwtAuthGuard)
-  @Post('schedule')
-  async setSchedule(@Req() req: AuthRequest, @Body() dto: SetScheduleDto) {
-    if (req.user.role !== UserRole.TUTOR) {
-      throw new ForbiddenException('Only tutors can set schedule');
-    }
-    const tutorId = req.user.userId;
-    return this.matchingService.setSchedule(tutorId, dto);
-  }
-
-  // ------------------------------
-  // ADMIN: Assign / Unassign tutors to class groups
-  // ------------------------------
-
-  /**
-   * ADMIN assigns tutor to a class group.
-   */
-  @UseGuards(JwtAuthGuard)
-  @Post('assign-tutor')
-  async assignTutor(
-    @Req() req: AuthRequest,
-    @Body('tutorId') tutorId: string,
-    @Body('courseId') courseId: string,
-    @Body('classGroup') classGroup: string,
-  ) {
-    if (req.user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only Admins can assign tutors');
-    }
-    return this.matchingService.assignTutor(tutorId, courseId, classGroup);
-  }
-
-  /**
-   * ADMIN unassigns tutor from a class group.
-   */
-  @UseGuards(JwtAuthGuard)
-  @Post('unassign-tutor')
-  async unassignTutor(
-    @Req() req: AuthRequest,
-    @Body('courseId') courseId: string,
-    @Body('classGroup') classGroup: string,
-  ) {
-    if (req.user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only Admins can unassign tutors');
-    }
-    return this.matchingService.unassignTutor(courseId, classGroup);
+    return this.matchingService.unregisterStudent(studentId, dto.registrationId);
   }
 
   // ------------------------------

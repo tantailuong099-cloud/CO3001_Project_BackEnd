@@ -32,15 +32,12 @@ class SessionDto {
 
   @IsString()
   @IsOptional()
-  location: string;
+  location?: string;
 
   @IsString()
   @IsOptional()
+  @IsString({ each: true })
   studentAttemp?: string[];
-
-  @IsString()
-  @IsOptional()
-  status?: string; // thêm vào
 }
 
 /**
@@ -52,7 +49,7 @@ export class SetScheduleDto {
    */
   @IsMongoId()
   @IsNotEmpty()
-  courseId: string;
+  registrationId: string;
 
   @IsNotEmpty()
   @IsString()

@@ -4,8 +4,10 @@ import {
   IsNotEmpty,
   IsString,
   IsArray,
+  IsMongoId,
   ValidateNested,
   IsIn,
+  Matches
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -25,16 +27,17 @@ class SessionDto {
 
   @IsString()
   @IsNotEmpty()
+  @Matches(/^\d{2}:\d{2}$/, { message: "startTime must be HH:MM" })
   startTime: string;
 
   @IsString()
   @IsNotEmpty()
+  @Matches(/^\d{2}:\d{2}$/, { message: "startTime must be HH:MM" })
   endTime: string;
 }
 
 export class AssignTutorDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsMongoId()
   courseId: string;
 
   @IsString()
