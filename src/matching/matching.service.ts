@@ -169,7 +169,7 @@ export class MatchingService {
       throw new BadRequestException("Registration period is not active");
     }
 
-    const student = await this.userModel.findById(studentId).lean();
+    const student = await this.userModel.findById(studentId);
     if (!student || student.role !== UserRole.STUDENT) {
       throw new BadRequestException("Invalid student user");
     }
@@ -177,7 +177,7 @@ export class MatchingService {
     // Check if student already registered in ANY classGroup of the same course
     const conflict = await this.registrationModel.findOne({
       course: registration.course,
-      students: studentId,
+      students: student.email,
       _id: { $ne: registration._id }
     });
 
@@ -193,12 +193,12 @@ export class MatchingService {
     }
 
     // Prevent duplicate
-    if (registration.students.includes(studentId)) {
+    if (registration.students.includes(student.email)) {
       throw new BadRequestException("Student already registered");
     }
 
     // Update atomic
-    registration.students.push(studentId);
+    registration.students.push(student.email);
     registration.registeredCount += 1;
     await registration.save();
 
@@ -230,8 +230,13 @@ export class MatchingService {
     if (!course) {
       throw new NotFoundException("Course not found.");
     }
+    
+    const student = await this.userModel.findById(studentId);
+    if (!student || student.role !== UserRole.STUDENT) {
+      throw new BadRequestException("Invalid student user");
+    }
 
-    if (!registration.students.includes(studentId)) {
+    if (!registration.students.includes(student.email)) {
       throw new BadRequestException("Student is not registered in this class group.");
     }
 
@@ -249,7 +254,7 @@ export class MatchingService {
     const updated = await this.registrationModel.findByIdAndUpdate(
       registrationId,
       {
-        $pull: { students: studentId },
+        $pull: { students: student.email },
         $inc: { registeredCount: -1 }
       },
       { new: true }
@@ -397,13 +402,13 @@ export class MatchingService {
     const filter: any = {};
 
     if (user.role === UserRole.STUDENT) {
-      filter.students = user._id.toString();
+      if (!user.email) return [];
+      filter.students = user.email;
     } else if (user.role === UserRole.TUTOR) {
       filter.tutor = user._id.toString();
     } else {
       return [];
     }
-
 
     const registrationList = await this.registrationModel.find(filter).lean();
     const mergeResult = await Promise.all(
@@ -507,22 +512,26 @@ export class MatchingService {
      ------------------- */
   async addSession(userId: string, userRole: UserRole, dto: AddSessionDto) {
     // 1. Tìm Registration (Lớp học phần)
-    const regId = (dto as any).registrationId;
-    if (!regId) throw new NotFoundException('Registration id not provided');
-    if (!Types.ObjectId.isValid(regId)) throw new BadRequestException('Invalid registrationId');
-    
-    const registration = await this.registrationModel.findById(regId);
-    if (!registration) throw new NotFoundException('Class registration not found');
-
-
-    // Permission: Tutors can only add session to their assigned class; Admins allowed; Students not allowed
-    if (userRole === UserRole.TUTOR) {
-      if (!registration.tutor || registration.tutor !== userId) {
-        throw new ForbiddenException('You are not the assigned tutor for this class');
-      }
-    } else if (userRole !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only Tutors or Admins can add sessions');
+    const registration = await this.registrationModel.findById(dto.courseId);
+    if (!registration) {
+      throw new NotFoundException('Class registration not found');
     }
+    // const regId = (dto as any).registrationId;
+    // if (!regId) throw new NotFoundException('Registration id not provided');
+    // if (!Types.ObjectId.isValid(regId)) throw new BadRequestException('Invalid registrationId');
+    
+    // const registration = await this.registrationModel.findById(regId);
+    // if (!registration) throw new NotFoundException('Class registration not found');
+
+
+    // // Permission: Tutors can only add session to their assigned class; Admins allowed; Students not allowed
+    // if (userRole === UserRole.TUTOR) {
+    //   if (!registration.tutor || registration.tutor !== userId) {
+    //     throw new ForbiddenException('You are not the assigned tutor for this class');
+    //   }
+    // } else if (userRole !== UserRole.ADMIN) {
+    //   throw new ForbiddenException('Only Tutors or Admins can add sessions');
+    // }
 
     // 3. Chuẩn bị object Session mới
     const newSession = {
@@ -601,7 +610,7 @@ export class MatchingService {
     // 7. Lưu vào Database
     // Sử dụng $push để thêm vào mảng sessions
     const updatedRegistration = await this.registrationModel.findByIdAndUpdate(
-      regId,
+      dto.courseId,
       {
         $push: { sessions: newSession },
         // Nếu lớp chưa active và có session, có thể đổi status (tùy business logic)
@@ -621,7 +630,7 @@ export class MatchingService {
     userRole: UserRole,
     dto: UpdateAttendanceDto,
   ) {
-    const regId = dto.registrationId;
+    const regId = dto.courseId;
     if (!regId) throw new NotFoundException("Registration id not provided");
 
     const registration = await this.registrationModel.findById(regId);
@@ -640,13 +649,13 @@ export class MatchingService {
 
     if (dto.isPresent) {
       // ADD studentId
-      if (!session.studentAttemp.includes(dto.studentId)) {
-        session.studentAttemp.push(dto.studentId);
+      if (!session.studentAttemp.includes(dto.studentEmail)) {
+        session.studentAttemp.push(dto.studentEmail);
       }
     } else {
       // REMOVE studentId
       session.studentAttemp = session.studentAttemp.filter(
-        id => id !== dto.studentId,
+         (email) => email !== dto.studentEmail,
       );
     }
 
@@ -669,37 +678,39 @@ export class MatchingService {
       .findOne({ courseCode: registration.courseCode })
       .lean();
 
-    if (!course) return { studentProgress: [] };
+    if (!course) return { ...registration, course: null, studentProgress: [] };
 
     // students stored as studentId (ObjectId strings)
     // const students = await this.userModel
     //   .find({ _id: { $in: registration.students } })
     //   .lean();
 
-    // registration.students should be array of student _id strings
-    const studentIds = registration.students || [];
-    if (studentIds.length === 0) return { studentProgress: [] };
-
     // Cast the lean result to StudentLean[]
+
     const students = await this.userModel
-      .find({ _id: { $in: studentIds } })
-      .lean<StudentLean[]>();
+      .find({
+        email: { $in: registration.students },
+      })
+      .lean();
 
     const studentProgress = students.map((student) => {
       const subjectData = student.subjects?.find(
         (sub: any) => sub.Subject === course.courseName,
       );
 
+    const profileData: any =
+        student.subjects.find((sub: any) => sub.studentId) || {};
+
       return {
         _id: student._id,
         name: student.name,
         email: student.email,
         avatar: student.avatar,
-        studentId: student.studentId || "N/A",
-        scores: subjectData?.scores ?? null,
+        studentId: profileData.studentId || (student as any).studentId || 'N/A',
+        scores: subjectData ? subjectData.scores : null,
       };
     });
 
-    return { studentProgress };
+    return { studentProgress: studentProgress };
   }
 }

@@ -5,7 +5,7 @@ import { IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
 export class AddSessionDto {
   @IsString()
   @IsNotEmpty()
-  registrationId: string; 
+  courseId: string; 
 
   @IsString()
   @IsNotEmpty()
