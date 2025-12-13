@@ -164,7 +164,6 @@ export class MatchingController {
     if (req.user.role !== UserRole.STUDENT) {
       throw new ForbiddenException('Only students can register');
     }
-    console.log(dto);
     const studentId = req.user.userId;
     return this.matchingService.registerStudent(studentId, dto);
   }

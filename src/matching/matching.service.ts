@@ -165,15 +165,6 @@ export class MatchingService {
     }
 
     const now = new Date();
-
-    console.log("---- DEBUG REGISTRATION PERIOD CHECK ----");
-    console.log("now =", now.toISOString());
-    console.log("course.registrationStart =", course.registrationStart);
-    console.log("course.registrationEnd   =", course.registrationEnd);
-    console.log("start < now? =", now < course.registrationStart);
-    console.log("now > end?   =", now > course.registrationEnd);
-    console.log("-----------------------------------------");
-
     if (now < course.registrationStart || now > course.registrationEnd) {
       throw new BadRequestException("Registration period is not active");
     }
