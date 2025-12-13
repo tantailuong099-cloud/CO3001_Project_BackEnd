@@ -99,6 +99,78 @@ export class MaterialsService {
     }
   }
 
+  async deleteMaterial(materialId: string): Promise<MaterialDocument> {
+    // 1. Tìm tài liệu trong DB để lấy thông tin cần thiết
+    const materialToDelete = await this.materialModel.findById(materialId);
+
+    if (!materialToDelete) {
+      throw new NotFoundException(
+        `Material with ID "${materialId}" not found.`,
+      );
+    }
+
+    // 2. Trích xuất thông tin quan trọng từ tài liệu
+    // Trong schema của bạn không có courseId, nhưng logic tạo lại có.
+    // Giả sử courseId được lưu trong material document. Nếu không, bạn cần điều chỉnh.
+    const { sharedType } = materialToDelete;
+    // Lấy courseId từ DTO hoặc từ chính material nếu đã lưu
+    // Ví dụ: const courseId = materialToDelete.courseId;
+    // Để ví dụ này chạy, ta sẽ giả định courseId được truyền vào hàm
+    // Hoặc bạn phải thêm trường courseId vào MaterialSchema
+    // --> Để đơn giản, ta sẽ dựa vào logic là FE sẽ gửi cả courseId và materialId
+    // --> Cách tốt hơn là lưu `courseId` vào `MaterialSchema` lúc tạo.
+    // --> Ở đây, tôi sẽ cập nhật logic để lấy `courseId` từ `registration` luôn.
+
+    try {
+      // 3. Xóa file trên Cloudinary
+      // if (pdfUrl) {
+      //   // Cloudinary cần `public_id` để xóa, không phải URL đầy đủ.
+      //   // `public_id` là phần cuối trong URL, không bao gồm extension.
+      //   // Ví dụ URL: "http://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"
+      //   // -> public_id: "sample"
+      //   // Nếu có thư mục: "folder/sample"
+      //   const publicId = this.extractPublicIdFromUrl(pdfUrl);
+
+      //   // API của Cloudinary có thể yêu cầu `resource_type` nếu không phải là ảnh.
+      //   // Vì là file PDF, nó có thể là 'raw' hoặc 'image'.
+      //   // Ta nên chỉ định rõ để tránh lỗi.
+      //   await this.cloudinaryService.uploader.destroy(publicId, {
+      //     resource_type: 'raw', // Hoặc 'image' tùy vào cách bạn upload
+      //   });
+      // }
+
+      // 4. Gỡ bỏ ID của tài liệu khỏi mảng trong `registrations`
+      const updateField = `materials.${sharedType}`; // vd: "materials.slide"
+
+      // Sử dụng toán tử $pull để xóa materialId khỏi mảng tương ứng
+      // Ta cần tìm registration nào chứa materialId này
+      await this.registrationModel.findOneAndUpdate(
+        { [updateField]: materialId }, // Tìm document registration có materialId trong mảng
+        {
+          $pull: { [updateField]: materialId },
+        },
+      );
+
+      // 5. Xóa document tài liệu khỏi collection 'materials'
+      const deletedMaterial =
+        await this.materialModel.findByIdAndDelete(materialId);
+
+      if (!deletedMaterial) {
+        // Trường hợp này ít xảy ra nếu đã kiểm tra ở trên, nhưng vẫn là một lớp bảo vệ tốt
+        throw new NotFoundException(
+          `Material with ID "${materialId}" could not be deleted as it was not found.`,
+        );
+      }
+
+      return deletedMaterial;
+    } catch (err) {
+      // Bắt lỗi từ Cloudinary hoặc MongoDB và báo lỗi chung
+      throw new InternalServerErrorException(
+        err.message || 'Failed to delete material due to an unexpected error.',
+      );
+    }
+  }
+
   async updateMaterial(updateMaterialDto: UpdateMaterialDto, id: string) {
     try {
       const updatedMaterial = await this.materialModel

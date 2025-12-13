@@ -53,6 +53,11 @@ export class CourseController {
     return this.courseService.getAllCourses();
   }
 
+  @Get('count')
+  async countCourse() {
+    return this.courseService.countCourse();
+  }
+
   @Get(':id')
   async getCourseById(@Param('id') id: string) {
     return this.courseService.getCourseById(id);

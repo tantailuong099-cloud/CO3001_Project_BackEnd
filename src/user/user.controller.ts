@@ -23,13 +23,25 @@ export class UserController {
 
   /**
    * Get full student info for a list of emails
-   * Example: GET /user/students?emails=aa@x.com,bb@x.com
+   * Example: GET /user/studen
+   * ts?emails=aa@x.com,bb@x.com
    */
+
+  @Get()
+  async getAll() {
+    return this.userService.getAll();
+  }
+
   @Get('students')
   async getStudentsByEmails(@Query('emails') emails: string) {
     if (!emails) throw new BadRequestException('Emails query param required');
     const emailArray = emails.split(',').map((e) => e.trim());
     return this.userService.getStudentsByEmails(emailArray);
+  }
+
+  @Get('count')
+  async getStudentAndTutorCount() {
+    return this.userService.getStudentAndTutorCount();
   }
 
   @Get(':id')

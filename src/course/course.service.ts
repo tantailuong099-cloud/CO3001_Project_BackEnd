@@ -1,24 +1,32 @@
 // src\course\course.service.ts
 
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Course, CourseDocument } from './schema/course.schema';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
-import { Material, Registration, RegistrationDocument } from '@/matching/schema/registration.schema';
+import {
+  Material,
+  Registration,
+  RegistrationDocument,
+} from '@/matching/schema/registration.schema';
 
 /* -----------------------------------------
    Normalize array input BEFORE using it
 ----------------------------------------- */
 function normalizeArray(value: any): string[] {
   if (!value) return [];
-  if (Array.isArray(value)) return value.map(v => String(v).trim());
+  if (Array.isArray(value)) return value.map((v) => String(v).trim());
 
   if (typeof value === 'string') {
     try {
       const arr = JSON.parse(value.replace(/'/g, '"'));
-      if (Array.isArray(arr)) return arr.map(v => String(v).trim());
+      if (Array.isArray(arr)) return arr.map((v) => String(v).trim());
     } catch {}
     return [value.trim()];
   }
@@ -36,7 +44,6 @@ export class CourseService {
     private readonly registrationModel: Model<RegistrationDocument>,
   ) {}
 
-
   private computeStatus(course: any): string {
     const now = new Date();
     const regStart = new Date(course.registrationStart);
@@ -44,12 +51,11 @@ export class CourseService {
     const start = new Date(course.courseStart);
     const end = new Date(course.courseEnd);
 
-    if (now < regStart) return "upcoming";
-    if (now >= regStart && now <= regEnd) return "registration";
-    if (now > regEnd && now < end) return "ongoing";
-    return "completed";
+    if (now < regStart) return 'upcoming';
+    if (now >= regStart && now <= regEnd) return 'registration';
+    if (now > regEnd && now < end) return 'ongoing';
+    return 'completed';
   }
-
 
   /** Create course with auto classGroups and defaults */
   async createCourse(dto: CreateCourseDto) {
@@ -60,11 +66,14 @@ export class CourseService {
     const finalGroups =
       classGroups.length > 0
         ? classGroups
-        : Array.from({ length: 5 }, (_, i) => `CC${String(i + 1).padStart(2, '0')}`);
+        : Array.from(
+            { length: 5 },
+            (_, i) => `CC${String(i + 1).padStart(2, '0')}`,
+          );
 
     const coursePayload = new this.courseModel({
       ...dto,
-      classGroups : finalGroups,
+      classGroups: finalGroups,
       semester: dto.semester || '2025 Fall',
 
       registrationStart: dto.registrationStart
@@ -84,9 +93,11 @@ export class CourseService {
         : new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000),
     });
 
-      // validate date coherence
+    // validate date coherence
     if (coursePayload.registrationStart >= coursePayload.registrationEnd) {
-      throw new BadRequestException('registrationStart must be before registrationEnd');
+      throw new BadRequestException(
+        'registrationStart must be before registrationEnd',
+      );
     }
     if (coursePayload.courseStart >= coursePayload.courseEnd) {
       throw new BadRequestException('courseStart must be before courseEnd');
@@ -107,33 +118,30 @@ export class CourseService {
       students: [],
       sessions: [],
       registeredCount: 0,
-      materials: Material
+      materials: Material,
     }));
 
     await this.registrationModel.insertMany(regDocs);
     return saved;
   }
 
-
   /** Get all courses */
   async getAllCourses() {
     const courses = await this.courseModel.find().lean();
-    return courses.map(c => ({
+    return courses.map((c) => ({
       ...c,
       status: this.computeStatus(c),
     }));
   }
-
 
   /** Get course by courseCode */
   async getCoursesByCode(courseCode: string) {
     const courses = await this.courseModel.find({ courseCode }).lean();
-    return courses.map(c => ({
+    return courses.map((c) => ({
       ...c,
       status: this.computeStatus(c),
     }));
   }
-
 
   /** Get course by ID */
   async getCourseById(id: string) {
@@ -146,7 +154,6 @@ export class CourseService {
     };
   }
 
-
   /* ---------------------------------------------------------------------
       UPDATE COURSE (AND UPDATE CLASSGROUP REGISTRATIONS)
      --------------------------------------------------------------------- */
@@ -155,7 +162,9 @@ export class CourseService {
     if (!course) throw new NotFoundException('Course not found');
 
     // normalize BEFORE comparing
-    const normalizedGroups = dto.classGroups ? normalizeArray(dto.classGroups) : null;
+    const normalizedGroups = dto.classGroups
+      ? normalizeArray(dto.classGroups)
+      : null;
 
     if (normalizedGroups) {
       const oldGroups = course.classGroups;
@@ -191,14 +200,15 @@ export class CourseService {
       dto.classGroups = newGroups;
     }
 
-    const updated = await this.courseModel.findByIdAndUpdate(id, dto, { new: true }).lean();
+    const updated = await this.courseModel
+      .findByIdAndUpdate(id, dto, { new: true })
+      .lean();
     return {
       ...updated,
       status: this.computeStatus(updated),
     };
   }
 
-  
   /* ---------------------------------------------------------------------
       DELETE COURSE (AND ALL CLASSGROUP REGISTRATIONS)
      --------------------------------------------------------------------- */
@@ -207,5 +217,10 @@ export class CourseService {
     if (res.deletedCount === 0) throw new NotFoundException('Course not found');
     await this.registrationModel.deleteMany({ course: id });
     return { message: 'Course and class group registrations deleted' };
+  }
+
+  async countCourse() {
+    const totalCourse = await this.courseModel.countDocuments({});
+    return { course: totalCourse };
   }
 }

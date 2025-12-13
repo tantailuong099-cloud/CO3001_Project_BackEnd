@@ -147,10 +147,6 @@ export class UserService {
     return newUser.save();
   }
 
-  // ---------------------------------------------------------
-  // Các hàm bên dưới giữ nguyên
-  // ---------------------------------------------------------
-
   async getUserListByRole(role: 'Tutor' | 'Student' | 'Admin') {
     return this.userModel.discriminators?.[role].find({});
   }
@@ -207,5 +203,47 @@ export class UserService {
     if (!studentModel) throw new BadRequestException('Student model not found');
 
     return studentModel.find({ email: { $in: emails } }).exec();
+  }
+
+  async getStudentAndTutorCount(): Promise<{
+    students: number;
+    tutors: number;
+  }> {
+    try {
+      // Lấy ra các model con (discriminator models)
+      const studentModel = this.userModel.discriminators?.[
+        'Student'
+      ] as Model<StudentDocument>;
+      const tutorModel = this.userModel.discriminators?.[
+        'Tutor'
+      ] as Model<TutorDocument>;
+
+      // Kiểm tra nếu model không tồn tại (lỗi cấu hình)
+      if (!studentModel || !tutorModel) {
+        throw new InternalServerErrorException(
+          'Student or Tutor model not found. Check discriminators setup.',
+        );
+      }
+
+      // Sử dụng Promise.all để thực hiện 2 câu lệnh đếm song song -> hiệu năng tốt hơn
+      const [studentCount, tutorCount] = await Promise.all([
+        studentModel.countDocuments({}), // Đếm tất cả document trong collection của Student
+        tutorModel.countDocuments({}), // Đếm tất cả document trong collection của Tutor
+      ]);
+
+      return {
+        students: studentCount,
+        tutors: tutorCount,
+      };
+    } catch (error) {
+      // Bắt các lỗi có thể xảy ra trong quá trình truy vấn DB
+      throw new InternalServerErrorException(
+        error.message || 'An error occurred while counting users.',
+      );
+    }
+  }
+
+  async getAll() {
+    return this.userModel.find({});
   }
 }

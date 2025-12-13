@@ -8,7 +8,8 @@ import {
   UseInterceptors, // 👈 2. Import
   BadRequestException,
   Req,
-  UseGuards, // Optional: Để validate file
+  UseGuards,
+  Delete, // Optional: Để validate file
 } from '@nestjs/common';
 import { MaterialsService } from './materials.service';
 import { CreateMaterialDto } from './dto/create-materials.dto';
@@ -52,6 +53,12 @@ export class MaterialsController {
       file,
       userId,
     );
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard) // Bảo vệ route
+  async deleteMaterial(@Param('id') materialId: string) {
+    return this.materialsService.deleteMaterial(materialId);
   }
 
   @Post('update/:id')

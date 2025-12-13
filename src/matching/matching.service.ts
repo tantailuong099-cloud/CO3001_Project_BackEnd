@@ -1,17 +1,27 @@
 // src\matching\matching.service.ts
 
 import {
-  Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException 
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  //ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Registration, RegistrationDocument } from './schema/registration.schema';
+import {
+  Registration,
+  RegistrationDocument,
+} from './schema/registration.schema';
 import { RegisterProgramDto } from './dto/register-program.dto';
 import { SetScheduleDto } from './dto/set-schedule.dto';
 import { User, UserRole, UserDocument } from '@/user/schema/user.schema';
 import { Course, CourseDocument } from '@/course/schema/course.schema';
 import { UpdateRegistrationDto } from './dto/update-registration.dto';
-import { Material, MaterialDocument } from '@/materials/schema/materials.schema';
+import {
+  Material,
+  MaterialDocument,
+} from '@/materials/schema/materials.schema';
 import { AddSessionDto } from './dto/add-session.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 
@@ -154,56 +164,58 @@ export class MatchingService {
    */
 
   async registerStudent(studentId: string, dto: RegisterProgramDto) {
-    const registration = await this.registrationModel.findById(dto.registrationId);
+    const registration = await this.registrationModel.findById(
+      dto.registrationId,
+    );
     if (!registration) {
-      throw new NotFoundException("Registration not found");
+      throw new NotFoundException('Registration not found');
     }
 
     const course = await this.courseModel.findById(registration.course);
     if (!course) {
-      throw new NotFoundException("Course not found");
+      throw new NotFoundException('Course not found');
     }
 
     const now = new Date();
 
-    console.log("---- DEBUG REGISTRATION PERIOD CHECK ----");
-    console.log("now =", now.toISOString());
-    console.log("course.registrationStart =", course.registrationStart);
-    console.log("course.registrationEnd   =", course.registrationEnd);
-    console.log("start < now? =", now < course.registrationStart);
-    console.log("now > end?   =", now > course.registrationEnd);
-    console.log("-----------------------------------------");
+    console.log('---- DEBUG REGISTRATION PERIOD CHECK ----');
+    console.log('now =', now.toISOString());
+    console.log('course.registrationStart =', course.registrationStart);
+    console.log('course.registrationEnd   =', course.registrationEnd);
+    console.log('start < now? =', now < course.registrationStart);
+    console.log('now > end?   =', now > course.registrationEnd);
+    console.log('-----------------------------------------');
 
     if (now < course.registrationStart || now > course.registrationEnd) {
-      throw new BadRequestException("Registration period is not active");
+      throw new BadRequestException('Registration period is not active');
     }
 
     const student = await this.userModel.findById(studentId);
     if (!student || student.role !== UserRole.STUDENT) {
-      throw new BadRequestException("Invalid student user");
+      throw new BadRequestException('Invalid student user');
     }
 
     // Check if student already registered in ANY classGroup of the same course
     const conflict = await this.registrationModel.findOne({
       course: registration.course,
       students: student.email,
-      _id: { $ne: registration._id }
+      _id: { $ne: registration._id },
     });
 
     if (conflict) {
       throw new ConflictException(
-        `Student already registered in class group ${conflict.classGroup}`
+        `Student already registered in class group ${conflict.classGroup}`,
       );
     }
 
     // Check capacity
     if (registration.registeredCount >= course.capacity) {
-      throw new BadRequestException("Class is full");
+      throw new BadRequestException('Class is full');
     }
 
     // Prevent duplicate
     if (registration.students.includes(student.email)) {
-      throw new BadRequestException("Student already registered");
+      throw new BadRequestException('Student already registered');
     }
 
     // Update atomic
@@ -212,8 +224,8 @@ export class MatchingService {
     await registration.save();
 
     return {
-      message: "Student successfully registered",
-      registration
+      message: 'Student successfully registered',
+      registration,
     };
   }
 
@@ -227,26 +239,28 @@ export class MatchingService {
    */
   async unregisterStudent(studentId: string, registrationId: string) {
     if (!Types.ObjectId.isValid(registrationId)) {
-      throw new BadRequestException("Invalid registrationId.");
+      throw new BadRequestException('Invalid registrationId.');
     }
 
     const registration = await this.registrationModel.findById(registrationId);
     if (!registration) {
-      throw new NotFoundException("Registration not found.");
+      throw new NotFoundException('Registration not found.');
     }
 
     const course = await this.courseModel.findById(registration.course);
     if (!course) {
-      throw new NotFoundException("Course not found.");
+      throw new NotFoundException('Course not found.');
     }
-    
+
     const student = await this.userModel.findById(studentId);
     if (!student || student.role !== UserRole.STUDENT) {
-      throw new BadRequestException("Invalid student user");
+      throw new BadRequestException('Invalid student user');
     }
 
     if (!registration.students.includes(student.email)) {
-      throw new BadRequestException("Student is not registered in this class group.");
+      throw new BadRequestException(
+        'Student is not registered in this class group.',
+      );
     }
 
     const now = new Date();
@@ -264,14 +278,14 @@ export class MatchingService {
       registrationId,
       {
         $pull: { students: student.email },
-        $inc: { registeredCount: -1 }
+        $inc: { registeredCount: -1 },
       },
-      { new: true }
+      { new: true },
     );
 
     return {
-      message: "Student successfully unregistered",
-      registration: updated
+      message: 'Student successfully unregistered',
+      registration: updated,
     };
   }
 
@@ -321,8 +335,8 @@ export class MatchingService {
       day: s.day,
       startTime: s.startTime,
       endTime: s.endTime,
-      form: s.form ?? "",
-      location: s.location ?? "",
+      form: s.form ?? '',
+      location: s.location ?? '',
       studentAttemp: s.studentAttemp ?? [],
     }));
 
@@ -345,7 +359,11 @@ export class MatchingService {
     return this.registrationModel.find().lean();
   }
 
-  async getRegistrationsFiltered(courseId?: string, courseCode?: string, classGroup?: string) {
+  async getRegistrationsFiltered(
+    courseId?: string,
+    courseCode?: string,
+    classGroup?: string,
+  ) {
     const filter: any = {};
 
     // Prefer courseId if present
@@ -359,7 +377,6 @@ export class MatchingService {
 
     return this.registrationModel.find(filter).lean();
   }
-
 
   /**
    * Get student’s registered courses
@@ -377,20 +394,18 @@ export class MatchingService {
   }
 
   async updateRegistration(registrationId: string, dto: UpdateRegistrationDto) {
-      const registration = await this.registrationModel.findById(registrationId);
-      if (!registration) throw new NotFoundException("Registration not found");
+    const registration = await this.registrationModel.findById(registrationId);
+    if (!registration) throw new NotFoundException('Registration not found');
 
-      if (dto.tutor !== undefined) {
-        const tutor = await this.userModel.findById(dto.tutor);
-        if (!tutor || tutor.role !== UserRole.TUTOR) {
-            throw new BadRequestException("Invalid tutor ID");
-        }
-        registration.tutor = dto.tutor;
+    if (dto.tutor !== undefined) {
+      const tutor = await this.userModel.findById(dto.tutor);
+      if (!tutor || tutor.role !== UserRole.TUTOR) {
+        throw new BadRequestException('Invalid tutor ID');
       }
-
-
-      await registration.save();
-      return { message: "Registration updated successfully", registration };
+      registration.tutor = dto.tutor;
+    }
+    await registration.save();
+    return { message: 'Registration updated successfully', registration };
   }
 
   async deleteRegistrationByCourseGroup(
@@ -536,10 +551,9 @@ export class MatchingService {
     // const regId = (dto as any).registrationId;
     // if (!regId) throw new NotFoundException('Registration id not provided');
     // if (!Types.ObjectId.isValid(regId)) throw new BadRequestException('Invalid registrationId');
-    
+
     // const registration = await this.registrationModel.findById(regId);
     // if (!registration) throw new NotFoundException('Class registration not found');
-
 
     // // Permission: Tutors can only add session to their assigned class; Admins allowed; Students not allowed
     // if (userRole === UserRole.TUTOR) {
@@ -563,8 +577,10 @@ export class MatchingService {
     // 4. Validate Logic Thời gian (Start < End)
     const startMin = this.parseHHMM(newSession.startTime);
     const endMin = this.parseHHMM(newSession.endTime);
-    if (startMin === null || endMin === null) throw new BadRequestException('Invalid time format');
-    if (startMin >= endMin) throw new BadRequestException('startTime must be before endTime');
+    if (startMin === null || endMin === null)
+      throw new BadRequestException('Invalid time format');
+    if (startMin >= endMin)
+      throw new BadRequestException('startTime must be before endTime');
 
     // 5. Kiểm tra trùng lịch TRONG CÙNG LỚP HỌC (Internal Conflict)
     // Không thể tạo 2 buổi học cùng giờ cho cùng 1 lớp
@@ -589,14 +605,16 @@ export class MatchingService {
         .lean();
 
       for (const other of otherRegs) {
-        if (other.sessions && this.sessionsOverlap([newSession], other.sessions as Session[])) {
+        if (
+          other.sessions &&
+          this.sessionsOverlap([newSession], other.sessions as Session[])
+        ) {
           throw new BadRequestException(
             `Schedule conflict: Tutor is teaching class "${other.courseCode} - ${other.classGroup}" at this time.`,
           );
         }
       }
     }
-
 
     // 6. Kiểm tra trùng lịch CỦA GIẢNG VIÊN (External Conflict)
     // Nếu có Tutor, phải đảm bảo Tutor không dạy lớp khác vào giờ này
@@ -648,14 +666,15 @@ export class MatchingService {
     dto: UpdateAttendanceDto,
   ) {
     const regId = dto.courseId;
-    if (!regId) throw new NotFoundException("Registration id not provided");
+    if (!regId) throw new NotFoundException('Registration id not provided');
 
     const registration = await this.registrationModel.findById(regId);
-    if (!registration) throw new NotFoundException("Class registration not found");
+    if (!registration)
+      throw new NotFoundException('Class registration not found');
 
     // Check session exists
     if (!registration.sessions || !registration.sessions[dto.sessionIndex]) {
-      throw new BadRequestException("Session not found at this index");
+      throw new BadRequestException('Session not found at this index');
     }
 
     const session = registration.sessions[dto.sessionIndex];
@@ -672,24 +691,25 @@ export class MatchingService {
     } else {
       // REMOVE studentId
       session.studentAttemp = session.studentAttemp.filter(
-         (email) => email !== dto.studentEmail,
+        (email) => email !== dto.studentEmail,
       );
     }
 
-    registration.markModified("sessions");
+    registration.markModified('sessions');
     await registration.save();
 
     return {
-      message: "Attendance updated successfully",
+      message: 'Attendance updated successfully',
       updatedSession: session,
     };
   }
 
   async studentProgress(id: string) {
-    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid registration id');
+    if (!Types.ObjectId.isValid(id))
+      throw new BadRequestException('Invalid registration id');
 
     const registration = await this.registrationModel.findById(id).lean();
-    if (!registration) throw new NotFoundException("Registration not found");
+    if (!registration) throw new NotFoundException('Registration not found');
 
     const course = await this.courseModel
       .findOne({ courseCode: registration.courseCode })
@@ -715,7 +735,7 @@ export class MatchingService {
         (sub: any) => sub.Subject === course.courseName,
       );
 
-    const profileData: any =
+      const profileData: any =
         student.subjects.find((sub: any) => sub.studentId) || {};
 
       return {
