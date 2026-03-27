@@ -1,72 +1,124 @@
-# Game E-commerce System (Fullstack)
+# 🎓 Student Tutor Support System (Fullstack)
 
-A fullstack Game E-commerce platform that allows users to browse, purchase, and manage digital game products. The system includes a modern frontend and a robust backend API.
+A fullstack web application that connects students with tutors, allowing users to manage learning activities, communication, and academic support efficiently.
 
-## 🧩 System Architecture
-Frontend 
+---
+
+# 🧩 System Architecture
+
+```text
+Frontend ( Next.js)
         ↓
- REST API (Backend)
+ REST API (Backend - NestJS)
         ↓
-   Database 
-- Frontend handles UI/UX and user interactions
-- Backend handles business logic, authentication, and data processing
-- Database stores users, products, orders, and transactions
+   Database (MongoDB)
+```
 
-## 🚀 Features
+- Frontend handles UI/UX and user interactions  
+- Backend handles business logic, authentication, and API services  
+- Database stores users, tutors, sessions, messages, and system data  
 
-### 🖥️ Frontend
-- Browse and search games
-- Filter by category, price, platform
-- Game detail page
-- Cart & checkout UI
-- Authentication (Login/Register)
+---
 
-### ⚙️ Backend
-- RESTful API
-- User authentication & authorization (JWT)
-- Product management (CRUD)
-- Order & payment processing
-- Online payment integration (ZaloPay)
-- Database management
-- Role-based access (Admin/User)
+# 🚀 Features
 
-## 🛠️ Tech Stack
-- Frontend: Next.js, TailwindCSS
-- Backend: Nest.js, JWT Authentication, RESTful API
-- Database:  MongoDB
+## 🖥️ Frontend
+- User-friendly and responsive UI  
+- Student & Tutor dashboards  
+- Browse and search tutors  
+- Booking tutor sessions  
+- Real-time chat / messaging  
+- Authentication (Login/Register)  
+- Profile management  
 
-## 🔗 API Overview
+---
 
-| Method | Endpoint        | Description   |
-|--------|---------------|---------------|
-| POST   | /auth/login    | Login user    |
-| POST   | /auth/register | Register user |
-| POST   | /orders        | Create order  |
+## ⚙️ Backend
+- RESTful API architecture  
+- Secure authentication & authorization (JWT)  
+- User management (Student / Tutor / Admin)  
+- Tutor booking & scheduling system  
+- Messaging system  
+- Session & course management  
+- Database management  
+- Role-based access control  
 
-## ⚙️ Installation
-### 1. Clone project
-- git clone https://github.com/tantailuong099-cloud/Game_Ecommerce_FrontEnd.git
-- git clone https://github.com/tantailuong099-cloud/Game_Ecommerce_BackEnd.git
+---
 
-### 2. Setup Backend
-- cd Game_Ecommerce_BackEnd
-- npm install
-- npm start
+# 🛠️ Tech Stack
 
-### 3. Setup Frontend
-- cd Game_Ecommerce_FrontEnd
-- npm install
-- npm run dev
+## 🎨 Frontend
+- Next.js  
+- TailwindCSS 
 
-## 🔄 Data Flow
-- User interacts with UI
-- Frontend sends API request via Axios
-- Backend processes request
-- Database returns data
-- Backend sends response → Frontend renders UI
+## ⚙️ Backend
+- NestJS  
+- JWT Authentication  
+- RESTful API  
 
-## 👨‍💻 Author
-- GitHub: https://github.com/tantailuong099-cloud
+## 🗄️ Database
+- MongoDB  
 
-## ⭐ Support
-- If you like this project, give it a ⭐ on GitHub!
+---
+
+# 🔗 API Overview
+
+| Method | Endpoint              | Description                  |
+|--------|----------------------|------------------------------|
+| POST   | /auth/login          | Login user                   |
+| POST   | /auth/register       | Register user                |
+| GET    | /users/profile       | Get user profile             |
+| GET    | /tutors              | Get tutor list               |
+
+---
+
+# ⚙️ Installation
+
+## 1. Clone project
+
+```bash
+git clone https://github.com/tantailuong099-cloud/Student_Tutor_Support_System_FrontEnd.git
+git clone https://github.com/tantailuong099-cloud/Student_Tutor_Support_System_BackEnd.git
+```
+
+---
+
+## 2. Setup Backend
+
+```bash
+cd Student_Tutor_Support_System_BackEnd
+npm install
+npm start
+```
+
+---
+
+## 3. Setup Frontend
+
+```bash
+cd Student_Tutor_Support_System_FrontEnd
+npm install
+npm run dev
+```
+
+---
+
+# 🔄 Data Flow
+
+1. User interacts with UI  
+2. Frontend sends API request via Axios  
+3. Backend processes request  
+4. Database returns data  
+5. Backend sends response → Frontend renders UI  
+
+---
+
+# 👨‍💻 Author
+
+- GitHub: https://github.com/tantailuong099-cloud  
+
+---
+
+# ⭐ Support
+
+If you like this project, give it a ⭐ on GitHub!
